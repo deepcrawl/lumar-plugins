@@ -126,6 +126,74 @@ You can also pass `X-MCP-Toolsets: ai-visibility,context` as a header in custom 
 
 More surfaces (Content Relevance) will be added as opt-in toolsets without changing the connector URL.
 
+### Pointing at a different MCP URL (staging / self-hosted / scoped)
+
+The plugin defaults to production (`https://mcp.lumar.io/mcp`), but the URL is just a value in `plugins/lumar-analytics/mcp.json`. You can override it for any host by editing that file in a **local clone** of this repo and installing the plugin from the local path instead of the GitHub marketplace.
+
+Common reasons to override:
+
+- Staging server (e.g. `https://mcp.staging.lumar.io/mcp`) while testing pre-release toolsets
+- A scoped URL like `https://mcp.lumar.io/mcp/x/ai-visibility` to restrict the connector to one product surface
+- A self-hosted or tunnelled MCP endpoint (`http://localhost:8787/mcp`, an ngrok URL, etc.)
+
+Edit `plugins/lumar-analytics/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "lumar": {
+      "type": "http",
+      "url": "https://mcp.staging.lumar.io/mcp"
+    }
+  }
+}
+```
+
+If your custom endpoint needs extra headers (e.g. forcing a toolset scope without changing the path), add a `headers` block:
+
+```json
+{
+  "mcpServers": {
+    "lumar": {
+      "type": "http",
+      "url": "https://mcp.lumar.io/mcp",
+      "headers": {
+        "X-MCP-Toolsets": "ai-visibility,context"
+      }
+    }
+  }
+}
+```
+
+#### Example — Cursor with a local checkout pointing at staging
+
+1. Clone this repo locally:
+   ```bash
+   git clone https://github.com/deepcrawl/lumar-plugins.git ~/src/lumar-plugins
+   ```
+
+2. Edit `~/src/lumar-plugins/plugins/lumar-analytics/mcp.json` and change the `url` to your target — for example:
+   ```json
+   {
+     "mcpServers": {
+       "lumar": {
+         "type": "http",
+         "url": "https://mcp.staging.lumar.io/mcp"
+       }
+     }
+   }
+   ```
+
+3. In Cursor, open the plugin manager and add the local checkout as a marketplace source — point it at `~/src/lumar-plugins` (the repo root, where `.cursor-plugin/marketplace.json` lives).
+
+4. Install `lumar-analytics` from that marketplace listing. Cursor now provisions an MCP server named `lumar` pointed at your overridden URL.
+
+5. Open Cursor's **MCP** settings, find the `lumar` server, and run the OAuth flow — it will hit whichever host you configured (staging, self-hosted, etc.) instead of production.
+
+The same approach works for Claude Code (`/plugin marketplace add /path/to/lumar-plugins`) and Codex (`codex plugin marketplace add /path/to/lumar-plugins`) — the only thing that changes between hosts is the install command; the `mcp.json` override is shared.
+
+> Keep your local edit on a branch (or just don't commit `mcp.json`) so a `git pull` doesn't clobber it — and remember to switch back to production before opening any PRs against this repo.
+
 ### Tools currently exposed
 
 | Tool | Toolset | Purpose |
