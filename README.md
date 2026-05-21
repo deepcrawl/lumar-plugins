@@ -1,6 +1,10 @@
-# Lumar plugins for Claude Code
+# Lumar plugins for Claude Code and Cursor
 
-Lumar analytics for Claude Code. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, task review). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
+> Previously named `claude-lumar-plugin`. The old GitHub URL still redirects, but new installs should use `deepcrawl/lumar-plugins`.
+
+Lumar analytics as a plugin for both **Claude Code** and **Cursor**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, task review). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
+
+The same `skills/` tree is shared across both hosts — each host reads its own manifest (`.claude-plugin/` or `.cursor-plugin/`) and points at the same skill files.
 
 ## Plugins
 
@@ -8,13 +12,13 @@ Lumar analytics for Claude Code. Covers both **AI Visibility** (audit, competito
 |:-------|:------------|
 | `lumar-analytics` | Lumar analytics skills — AI Visibility and Lumar Analyze; Content Relevance to follow |
 
-## Quickstart
+## Quickstart — Claude Code
 
 ### Option A: Install from Marketplace (recommended)
 
 1. **Add the marketplace** inside Claude Code:
    ```
-   /plugin marketplace add deepcrawl/claude-lumar-plugin
+   /plugin marketplace add deepcrawl/lumar-plugins
    ```
 
 2. **Install the plugin** — run `/plugin`, open the **Marketplaces** section, select **lumar-plugins**, and install `lumar-analytics`.
@@ -42,16 +46,28 @@ Lumar analytics for Claude Code. Covers both **AI Visibility** (audit, competito
 ### Option B: Install from a local clone
 
 ```bash
-git clone https://github.com/deepcrawl/claude-lumar-plugin.git
+git clone https://github.com/deepcrawl/lumar-plugins.git
 ```
 
 Then inside Claude Code:
 
 ```
-/plugin marketplace add /path/to/claude-lumar-plugin
+/plugin marketplace add /path/to/lumar-plugins
 ```
 
 and install `lumar-analytics` from the **Marketplaces** view. Run `/mcp` to authenticate.
+
+## Quickstart — Cursor
+
+Cursor reads `.cursor-plugin/marketplace.json` at the repo root and the per-plugin manifest at `plugins/lumar-analytics/.cursor-plugin/plugin.json`.
+
+1. **Add the plugin marketplace** in Cursor — open the Cursor plugin manager and add `deepcrawl/lumar-plugins` as a marketplace source (or point Cursor at a local clone of this repo).
+
+2. **Install `lumar-analytics`** from the marketplace listing.
+
+3. **Authenticate the Lumar MCP server** — open Cursor's **MCP** settings, find the `lumar` server provisioned by the plugin, and complete the OAuth flow in your browser.
+
+4. **Use a skill** — same natural-language triggers as Claude Code (see the prompt examples above and the skills table below).
 
 ## Skills
 
@@ -137,7 +153,7 @@ Analytics tools accept a `timeframe` parameter — a named window (`last_7d`, `l
 
 ## Requirements
 
-- Claude Code with plugin support
+- Claude Code (with plugin support) **or** Cursor (with plugin support)
 - A [Lumar](https://www.lumar.io) account with entitlements for the products whose toolsets you want to use (AI Visibility and/or Lumar Analyze)
 - Browser available on first connect for OAuth login
 

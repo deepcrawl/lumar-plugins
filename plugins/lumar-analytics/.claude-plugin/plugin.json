@@ -6,8 +6,8 @@
     "name": "Lumar",
     "email": "support@lumar.io"
   },
-  "homepage": "https://github.com/deepcrawl/claude-lumar-plugin",
-  "repository": "https://github.com/deepcrawl/claude-lumar-plugin",
+  "homepage": "https://github.com/deepcrawl/lumar-plugins",
+  "repository": "https://github.com/deepcrawl/lumar-plugins",
   "license": "MIT",
   "keywords": ["lumar", "ai-visibility", "seo", "analytics", "geo", "brand-monitoring"],
   "mcpServers": {

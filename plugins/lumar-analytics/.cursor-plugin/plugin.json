@@ -1,0 +1,17 @@
+{
+  "name": "lumar-analytics",
+  "displayName": "Lumar Analytics",
+  "version": "0.2.0",
+  "description": "Lumar analytics for Cursor: AI Visibility and Lumar Analyze skills, backed by the unified Lumar MCP server.",
+  "author": {
+    "name": "Lumar",
+    "email": "support@lumar.io"
+  },
+  "homepage": "https://github.com/deepcrawl/lumar-plugins",
+  "repository": "https://github.com/deepcrawl/lumar-plugins",
+  "license": "MIT",
+  "keywords": ["lumar", "ai-visibility", "seo", "analytics", "geo", "brand-monitoring"],
+  "category": "developer-tools",
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}
