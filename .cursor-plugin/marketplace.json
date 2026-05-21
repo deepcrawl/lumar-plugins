@@ -1,0 +1,17 @@
+{
+  "name": "lumar-plugins",
+  "owner": {
+    "name": "Lumar",
+    "email": "support@lumar.io"
+  },
+  "metadata": {
+    "description": "Lumar analytics for Cursor — AI Visibility and Lumar Analyze skills via the Lumar MCP server."
+  },
+  "plugins": [
+    {
+      "name": "lumar-analytics",
+      "source": "plugins/lumar-analytics",
+      "description": "Lumar analytics skills — AI Visibility (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and Lumar Analyze (crawl health, report deep-dive, URL investigation, export, task review)."
+    }
+  ]
+}
