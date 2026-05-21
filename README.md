@@ -1,8 +1,8 @@
-# Lumar plugins for Claude Code and Cursor
+# Lumar plugins for Claude Code, Cursor, and Codex
 
-Lumar analytics as a plugin for both **Claude Code** and **Cursor**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, task review). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
+Lumar analytics as a plugin for **Claude Code**, **Cursor**, and **OpenAI Codex**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, task review). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
 
-The same `skills/` tree is shared across both hosts — each host reads its own manifest (`.claude-plugin/` or `.cursor-plugin/`) and points at the same skill files.
+The same `skills/` tree is shared across all three hosts — each host reads its own manifest (`.claude-plugin/`, `.cursor-plugin/`, or `.codex-plugin/`) and points at the same skill files.
 
 ## Plugins
 
@@ -66,6 +66,22 @@ Cursor reads `.cursor-plugin/marketplace.json` at the repo root and the per-plug
 3. **Authenticate the Lumar MCP server** — open Cursor's **MCP** settings, find the `lumar` server provisioned by the plugin, and complete the OAuth flow in your browser.
 
 4. **Use a skill** — same natural-language triggers as Claude Code (see the prompt examples above and the skills table below).
+
+## Quickstart — Codex
+
+Codex reads `.agents/plugins/marketplace.json` at the repo root and the per-plugin manifest at `plugins/lumar-analytics/.codex-plugin/plugin.json`.
+
+1. **Add the marketplace** from your shell:
+   ```bash
+   codex plugin marketplace add deepcrawl/lumar-plugins
+   ```
+   (Or point at a local clone: `codex plugin marketplace add /path/to/lumar-plugins`.)
+
+2. **Install `lumar-analytics`** — inside Codex CLI run `/plugins`, open the marketplace, and install.
+
+3. **Authenticate the Lumar MCP server** — Codex will prompt on first install (`ON_INSTALL` policy) and run the browser OAuth flow against `https://mcp.lumar.io/mcp`.
+
+4. **Use a skill** — same natural-language triggers as Claude Code and Cursor.
 
 ## Skills
 
@@ -151,7 +167,7 @@ Analytics tools accept a `timeframe` parameter — a named window (`last_7d`, `l
 
 ## Requirements
 
-- Claude Code (with plugin support) **or** Cursor (with plugin support)
+- Claude Code, Cursor, **or** Codex (with plugin support)
 - A [Lumar](https://www.lumar.io) account with entitlements for the products whose toolsets you want to use (AI Visibility and/or Lumar Analyze)
 - Browser available on first connect for OAuth login
 

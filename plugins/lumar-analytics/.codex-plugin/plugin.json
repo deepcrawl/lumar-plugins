@@ -1,0 +1,19 @@
+{
+  "name": "lumar-analytics",
+  "version": "0.2.0",
+  "description": "Bring Lumar analytics into Codex: AI Visibility skills (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) plus Lumar Analyze skills (crawl health, report deep-dive, URL investigation, export, task review)",
+  "author": {
+    "name": "Lumar",
+    "email": "support@lumar.io"
+  },
+  "homepage": "https://github.com/deepcrawl/lumar-plugins",
+  "repository": "https://github.com/deepcrawl/lumar-plugins",
+  "license": "MIT",
+  "keywords": ["lumar", "ai-visibility", "seo", "analytics", "geo", "brand-monitoring"],
+  "interface": {
+    "displayName": "Lumar Analytics",
+    "category": "developer-tools"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}
