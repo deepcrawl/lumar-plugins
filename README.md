@@ -1,7 +1,5 @@
 # Lumar plugins for Claude Code and Cursor
 
-> Previously named `claude-lumar-plugin`. The old GitHub URL still redirects, but new installs should use `deepcrawl/lumar-plugins`.
-
 Lumar analytics as a plugin for both **Claude Code** and **Cursor**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, task review). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
 
 The same `skills/` tree is shared across both hosts — each host reads its own manifest (`.claude-plugin/` or `.cursor-plugin/`) and points at the same skill files.
