@@ -1,0 +1,28 @@
+{
+  "name": "lumar-plugins",
+  "interface": {
+    "displayName": "Lumar Plugins"
+  },
+  "owner": {
+    "name": "Lumar",
+    "email": "support@lumar.io"
+  },
+  "metadata": {
+    "description": "Lumar analytics for Codex — AI Visibility and Lumar Analyze skills via the Lumar MCP server."
+  },
+  "plugins": [
+    {
+      "name": "lumar-analytics",
+      "source": {
+        "source": "local",
+        "path": "./plugins/lumar-analytics"
+      },
+      "description": "Lumar analytics skills — AI Visibility (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and Lumar Analyze (crawl health, report deep-dive, URL investigation, export, task review).",
+      "category": "developer-tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    }
+  ]
+}
