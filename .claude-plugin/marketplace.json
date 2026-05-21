@@ -9,7 +9,7 @@
     {
       "name": "lumar-analytics",
       "source": "./plugins/lumar-analytics/",
-      "description": "Bring Lumar analytics into Claude Code — AI Visibility today, with more product surfaces (Lumar Analyze, Content Relevance) to follow"
+      "description": "Bring Lumar analytics into Claude Code — AI Visibility and Lumar Analyze, with more product surfaces (Content Relevance) to follow"
     }
   ]
 }

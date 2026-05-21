@@ -1,12 +1,12 @@
 # Lumar plugins for Claude Code
 
-Lumar analytics for Claude Code: AI Visibility audits, competitor benchmarking, topic bootstrapping, prompt-run investigation, and visibility trend analysis. Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
+Lumar analytics for Claude Code. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, task review). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
 
 ## Plugins
 
 | Plugin | Description |
 |:-------|:------------|
-| `lumar-analytics` | Lumar analytics skills — AI Visibility today; Lumar Analyze and Content Relevance toolsets to follow |
+| `lumar-analytics` | Lumar analytics skills — AI Visibility and Lumar Analyze; Content Relevance to follow |
 
 ## Quickstart
 
@@ -21,13 +21,23 @@ Lumar analytics for Claude Code: AI Visibility audits, competitor benchmarking, 
 
 3. **Authenticate the Lumar MCP server** — run `/mcp` inside Claude Code and follow the browser auth flow. The plugin wires up `https://mcp.lumar.io/mcp`; on first connect you'll be sent to log in with your Lumar account.
 
-4. **Use a skill** — skills auto-trigger from natural language. Just describe what you want:
+4. **Use a skill** — skills auto-trigger from natural language. Just describe what you want.
+
+   **AI Visibility**
 
    - "Audit AI Visibility for `<brand>`" → `ai-visibility-audit`
    - "How does `<brand>` compare to its competitors in AI search?" → `competitor-benchmark`
    - "Set up AI Visibility tracking for `<brand>`" → `topic-bootstrap`
    - "Why did prompt `<id>` score low? What did ChatGPT actually say?" → `prompt-investigation`
    - "Why did our visibility drop last week? Trend the score over 90 days" → `visibility-trend`
+
+   **Lumar Analyze**
+
+   - "How is my last crawl doing? Show me the top issues" → `analyze-crawl-health`
+   - "Drill into duplicate pages — filter by status 200 and create a task" → `analyze-report-deep-dive`
+   - "What's wrong with `<url>`? Show me the resource detail" → `analyze-url-investigation`
+   - "Export the broken links report as CSV" → `analyze-export`
+   - "What SEO tasks are open and what's overdue?" → `analyze-task-review`
 
 ### Option B: Install from a local clone
 
@@ -52,6 +62,11 @@ and install `lumar-analytics` from the **Marketplaces** view. Run `/mcp` to auth
 | `topic-bootstrap` | Onboard a new brand — create the project, propose a topic + prompt set, bulk-create up to 50 topics atomically |
 | `prompt-investigation` | Drill into a single prompt — full AI answers, search queries, citations, mentions, and competitor positioning |
 | `visibility-trend` | Trace visibility score over time, attribute movement to specific topics, flag step changes |
+| `analyze-crawl-health` | Lumar Analyze CrawlOverview-style snapshot — top issue reports, category health trend, segment status |
+| `analyze-report-deep-dive` | Filter URLs inside one Analyze report by metric predicates; optionally create a tracked remediation task |
+| `analyze-url-investigation` | Resource-Detail-style view of one URL — crawl metrics, accessibility, site speed, GSC, structured data |
+| `analyze-export` | Async CSV/XML export of a report (or filtered subset) with a polling handoff so the conversation stays responsive |
+| `analyze-task-review` | List and prioritise Analyze remediation tasks; flag overdue, due-soon, and unassigned work (read-only) |
 
 ## MCP server
 
@@ -76,9 +91,10 @@ You can also pass `X-MCP-Toolsets: ai-visibility,context` as a header in custom 
 | Toolset | Tools | Status |
 |:--------|:------|:-------|
 | `context` | `lumar_get_me` | Always on — returns authenticated user + accessible accounts with per-product entitlements |
-| `ai-visibility` | `aivis_list_projects`, `aivis_create_project`, `aivis_*_topics`, `aivis_*_prompts`, `aivis_*_brands`, `aivis_get_brand_signals`, `aivis_get_visibility_scores`, `aivis_*_prompt_runs`, `aivis_get_prompt_run_details` | Available now |
+| `ai-visibility` | `aivis_list_projects`, `aivis_create_project`, `aivis_*_topics`, `aivis_*_prompts`, `aivis_*_brands`, `aivis_get_brand_signals`, `aivis_get_visibility_scores`, `aivis_*_prompt_runs`, `aivis_get_prompt_run_details`, `aivis_*_brand_domains` | Available now |
+| `analyze` | `analyze_list_projects`, `analyze_list_crawls`, `analyze_get_crawl_summary`, `analyze_list_segments`, `analyze_list_reports`, `analyze_get_report_metadata`, `analyze_list_report_rows`, `analyze_get_url_detail`, `analyze_get_health_trend`, `analyze_list_tasks`, `analyze_create_report_task`, `analyze_export_report`, `analyze_get_report_export` | Available now |
 
-More surfaces (Lumar Analyze, Content Relevance) will be added as opt-in toolsets without changing the connector URL.
+More surfaces (Content Relevance) will be added as opt-in toolsets without changing the connector URL.
 
 ### Tools currently exposed
 
@@ -101,6 +117,19 @@ More surfaces (Lumar Analyze, Content Relevance) will be added as opt-in toolset
 | `aivis_create_brand_domain` | `ai-visibility` | Attach a domain to an existing brand for citation attribution |
 | `aivis_update_brand_domain` | `ai-visibility` | Update an attached brand domain |
 | `aivis_delete_brand_domain` | `ai-visibility` | Detach a domain from a brand |
+| `analyze_list_projects` | `analyze` | List Analyze crawl projects for an account |
+| `analyze_list_crawls` | `analyze` | List crawl history for a project (status, timing, URL count) |
+| `analyze_get_crawl_summary` | `analyze` | Crawl metadata + report category snapshot + segment generation status |
+| `analyze_list_segments` | `analyze` | Project segments or crawl segment generation statuses |
+| `analyze_list_reports` | `analyze` | Report stats for a crawl/segment (totals, not rows) |
+| `analyze_get_report_metadata` | `analyze` | Report definition + filterable metrics with allowed predicates |
+| `analyze_list_report_rows` | `analyze` | URL rows for a report with structured `filterRules` and sort |
+| `analyze_get_url_detail` | `analyze` | ResourceDetail view: crawl metrics, accessibility, site speed, GSC, structured data |
+| `analyze_get_health_trend` | `analyze` | Health score time-series for a report category |
+| `analyze_list_tasks` | `analyze` | Project- or account-scoped remediation tasks |
+| `analyze_create_report_task` | `analyze` | Create a task linked to a report + optional structured filter |
+| `analyze_export_report` | `analyze` | Async CSV/XML export with optional filter and selected columns |
+| `analyze_get_report_export` | `analyze` | Poll export status and fetch the file URL once Generated |
 
 ### Timeframes
 
@@ -109,7 +138,7 @@ Analytics tools accept a `timeframe` parameter — a named window (`last_7d`, `l
 ## Requirements
 
 - Claude Code with plugin support
-- A [Lumar](https://www.lumar.io) account with entitlements for the products whose toolsets you want to use (AI Visibility today)
+- A [Lumar](https://www.lumar.io) account with entitlements for the products whose toolsets you want to use (AI Visibility and/or Lumar Analyze)
 - Browser available on first connect for OAuth login
 
 ## License

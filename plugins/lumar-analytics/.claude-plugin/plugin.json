@@ -1,7 +1,7 @@
 {
   "name": "lumar-analytics",
-  "version": "0.1.0",
-  "description": "Bring Lumar analytics into Claude Code with skills for AI Visibility audits, competitor benchmarking, topic bootstrapping, prompt-run investigation, and visibility trend analysis",
+  "version": "0.2.0",
+  "description": "Bring Lumar analytics into Claude Code: AI Visibility skills (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) plus Lumar Analyze skills (crawl health, report deep-dive, URL investigation, export, task review)",
   "author": {
     "name": "Lumar",
     "email": "support@lumar.io"
