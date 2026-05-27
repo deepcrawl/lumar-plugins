@@ -1,6 +1,6 @@
 {
   "name": "lumar-analytics",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lumar analytics skills for AI Visibility and Lumar Analyze, backed by the unified Lumar MCP server.",
   "author": {
     "name": "Lumar",
