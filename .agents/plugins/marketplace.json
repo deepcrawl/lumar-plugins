@@ -17,7 +17,7 @@
         "source": "local",
         "path": "./plugins/lumar-analytics"
       },
-      "description": "Lumar analytics skills — AI Visibility (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and Lumar Analyze (crawl health, report deep-dive, URL investigation, export, task review).",
+      "description": "Lumar analytics skills for AI Visibility and Lumar Analyze, including audits, crawl/report workflows, tasks, segments, single-page requests, custom metrics, Jira links, and project admin.",
       "category": "developer-tools",
       "policy": {
         "installation": "AVAILABLE",
