@@ -1,6 +1,6 @@
 # Lumar plugins for Claude Code, Cursor, and Codex
 
-Lumar analytics as a plugin for **Claude Code**, **Cursor**, and **OpenAI Codex**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, task review). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
+Lumar analytics as a plugin for **Claude Code**, **Cursor**, and **OpenAI Codex**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend, page evaluation, GSC, provider management, brand curation) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, tasks, crawls, segments, single-page requests, custom metrics, Jira links, project admin). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
 
 The same `skills/` tree is shared across all three hosts — each host reads its own manifest (`.claude-plugin/`, `.cursor-plugin/`, or `.codex-plugin/`) and points at the same skill files.
 
@@ -8,7 +8,7 @@ The same `skills/` tree is shared across all three hosts — each host reads its
 
 | Plugin            | Description                                                                           |
 | :---------------- | :------------------------------------------------------------------------------------ |
-| `lumar-analytics` | Lumar analytics skills — AI Visibility and Lumar Analyze; Content Relevance to follow |
+| `lumar-analytics` | Lumar analytics skills for AI Visibility and Lumar Analyze, backed by the unified Lumar MCP server |
 
 ## Quickstart — Claude Code
 
@@ -46,6 +46,11 @@ The same `skills/` tree is shared across all three hosts — each host reads its
    - "Export the broken links report as CSV" → `analyze-export`
    - "What SEO tasks are open and what's overdue?" → `analyze-task-review`
    - "Run a new crawl now on `<project>`" → `analyze-run-crawl`
+   - "Create a segment for 404 product pages" → `analyze-segment-management`
+   - "Run a single-page request for `<url>`" → `analyze-single-page-request`
+   - "Generate a custom metric for pricing schema" → `analyze-custom-metrics`
+   - "Create a Jira ticket for this task" → `analyze-jira-ticketing`
+   - "Create a new SEO project for `<domain>`" → `analyze-project-admin`
 
 ### Option B: Install from a local clone
 
@@ -104,8 +109,13 @@ Codex reads `.agents/plugins/marketplace.json` at the repo root and the per-plug
 | `analyze-report-deep-dive`  | Filter URLs inside one Analyze report by metric predicates; optionally create a tracked remediation task                                     |
 | `analyze-url-investigation` | Resource-Detail-style view of one URL — crawl metrics, accessibility, site speed, GSC, structured data                                       |
 | `analyze-export`            | Async CSV/XML export of a report (or filtered subset) with a polling handoff so the conversation stays responsive                            |
-| `analyze-task-review`       | List and prioritise Analyze remediation tasks; flag overdue, due-soon, and unassigned work (read-only)                                       |
+| `analyze-task-review`       | List and prioritise Analyze remediation tasks; optionally update status, priority, assignees, deadlines, or close tasks                      |
 | `analyze-run-crawl`         | Queue a fresh Analyze crawl outside the schedule, sanity-check for in-flight runs, hand back the new crawl id + dashboard link               |
+| `analyze-segment-management` | Create, update, or delete Analyze segments from structured CrawlUrl filter rules                                                              |
+| `analyze-single-page-request` | Run or inspect Single Page Requester jobs for one URL against a project's current crawl settings                                             |
+| `analyze-custom-metrics`    | Generate, test, and link AI-assisted custom metric containers to Analyze projects                                                             |
+| `analyze-jira-ticketing`    | Generate task ticket details and link Analyze remediation tasks to existing or new Jira issues                                                |
+| `analyze-project-admin`     | Create, update, or clone Analyze projects with the common crawl settings exposed by MCP                                                       |
 | `brand-curation`            | Curate the AI Visibility brand list — merge variants, promote the right primary, classify Own/Competitor/Other, attach domains               |
 | `page-evaluation`           | Deep-dive one URL's content evaluation — aggregated scores, LLM reasoning, per-snippet precision, per-competitor uniqueness, GSC queries     |
 | `gsc-setup`                 | Connect a Google Search Console property to an AI Visibility project so page runs unlock real-search-query relevance scoring                 |
@@ -117,27 +127,51 @@ The `lumar-analytics` plugin auto-configures one MCP server:
 
 | Server  | URL                        | Purpose                                                         |
 | :------ | :------------------------- | :-------------------------------------------------------------- |
-| `lumar` | `https://mcp.lumar.io/mcp` | Unified Lumar MCP — exposes opt-in toolsets per product surface |
+| `lumar` | `https://mcp.lumar.io/mcp` | Unified Lumar MCP — exposes opt-in toolsets per product surface and trust boundary |
 
-### Scoping by toolset (advanced)
+### Toolset consent and scoping
 
-The server is opt-in per toolset. The default URL (`/mcp`) enables every toolset the authenticated user is entitled to. To restrict to a single surface, point the plugin at a scoped URL:
+The server groups tools by product surface and trust boundary. For remote HTTP clients, the OAuth consent screen is the source of truth: the user grants leaf scopes such as `toolset:ai-visibility:read` or `toolset:analyze:external`, and the server registers only those toolsets for that token. The `context` toolset is always on so agents can call `lumar_get_me` and discover accounts.
+
+For scoped local or custom connector configs, use the URL path or `X-MCP-Toolsets` header. Leaf selectors are explicit:
 
 ```
-https://mcp.lumar.io/mcp/x/ai-visibility
+https://mcp.lumar.io/mcp/x/ai-visibility:read,analyze:read
 ```
 
-You can also pass `X-MCP-Toolsets: ai-visibility,context` as a header in custom configurations. Unknown toolset names are silently ignored.
+Bare product selectors are shortcuts: `ai-visibility` expands to `ai-visibility:read,ai-visibility:write`; `analyze` expands to `analyze:read,analyze:write,analyze:external,analyze:admin`. Unknown toolset names are silently ignored.
 
 ### Available toolsets
 
-| Toolset         | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Status                                                                                     |
-| :-------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- |
-| `context`       | `lumar_get_me`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Always on — returns authenticated user + accessible accounts with per-product entitlements |
-| `ai-visibility` | `aivis_*_projects`, `aivis_*_topics`, `aivis_*_prompts`, `aivis_*_brands`, `aivis_*_brand_domains`, `aivis_get_brand_signals`, `aivis_get_visibility_scores`, `aivis_*_prompt_runs`, `aivis_get_prompt_run_details`, `aivis_*_suggested_*`, `aivis_list_active_*`, `aivis_list_discovered_urls`, `aivis_list_serp_discovery_runs`, `aivis_*_page_*`, `aivis_list_search_queries`, `aivis_list_prompt_provider_visibility`, `aivis_run_project_prompts`, `aivis_*_gsc_property`, `aivis_list_google_connections`, `aivis_*_ai_providers`, `aivis_*_project_ai_provider`, `aivis_get_account_settings` | Available now                                                                              |
-| `analyze`       | `analyze_list_projects`, `analyze_list_crawls`, `analyze_run_crawl`, `analyze_get_crawl_summary`, `analyze_list_segments`, `analyze_list_reports`, `analyze_get_report_metadata`, `analyze_list_report_rows`, `analyze_get_url_detail`, `analyze_get_health_trend`, `analyze_list_tasks`, `analyze_create_report_task`, `analyze_export_report`, `analyze_get_report_export`                                                                                                                                                                                                                         | Available now                                                                              |
+| Toolset               | What it grants                                                                                                                                                                                                                                                      |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `context`             | `lumar_get_me` — always on; returns authenticated user and accessible accounts with per-product entitlements                                                                                                                 |
+| `ai-visibility:read`  | Read AI Visibility projects, topics, prompts, brands, visibility/citation/mention metrics, discovered URLs, content-evaluation scores, GSC bindings, provider catalog, suggestions.                                                                                 |
+| `ai-visibility:write` | Create / update / delete AI Visibility projects, topics, prompts, brand-domains; classify and merge brands; attach / update / detach GSC properties; enable / disable / sync project AI providers; trigger prompt + page runs; generate suggested topics / prompts. |
+| `analyze:read`        | Read Analyze crawl projects, crawls, segments, reports, report rows, URL detail, health / report trends, tasks, single-page requests, custom-metric generations, report export status.                                                                              |
+| `analyze:write`       | Create / update / delete Analyze segments and tasks; start exports; run crawls; start single-page requests; manage custom-metric generations and project links.                                                                                                     |
+| `analyze:external`    | Read and write the user's connected Jira tenant — list Jira projects / issue types / field metadata, search issues, create and delete task ↔ Jira links.                                                                                                             |
+| `analyze:admin`       | Create, update, and clone Analyze projects. Higher-trust project-wide crawl settings and new crawl targets live here, separate from per-crawl writes.                                                                                                                 |
 
 More surfaces (Content Relevance) will be added as opt-in toolsets without changing the connector URL.
+
+### Tools by toolset
+
+**`context`** — `lumar_get_me`.
+
+**`ai-visibility:read`** — `aivis_list_projects`, `aivis_get_account_settings`, `aivis_list_topics`, `aivis_search_topics`, `aivis_list_prompts`, `aivis_list_brands`, `aivis_list_brand_domains`, `aivis_get_top_brands`, `aivis_get_brand_signals`, `aivis_get_visibility_scores`, `aivis_list_search_queries`, `aivis_get_page_scores`, `aivis_list_page_runs`, `aivis_list_discovered_urls`, `aivis_list_serp_discovery_runs`, `aivis_list_prompt_runs`, `aivis_get_prompt_run_details`, `aivis_list_prompt_provider_visibility`, `aivis_list_ai_providers`, `aivis_list_project_ai_providers`, `aivis_list_active_providers`, `aivis_list_active_countries`, `aivis_list_google_connections`, `aivis_list_gsc_properties`, `aivis_get_suggested_topics`, `aivis_get_suggested_prompts`.
+
+**`ai-visibility:write`** — `aivis_create_project`, `aivis_update_project`, `aivis_delete_project`, `aivis_bulk_create_topics`, `aivis_update_topic`, `aivis_delete_topic`, `aivis_create_prompt`, `aivis_delete_prompt`, `aivis_update_brand`, `aivis_merge_brands`, `aivis_promote_brand`, `aivis_unmerge_brand`, `aivis_create_brand_domain`, `aivis_update_brand_domain`, `aivis_delete_brand_domain`, `aivis_attach_gsc_property`, `aivis_update_gsc_property`, `aivis_detach_gsc_property`, `aivis_enable_project_ai_provider`, `aivis_disable_project_ai_provider`, `aivis_sync_project_ai_providers`, `aivis_generate_suggested_topics`, `aivis_generate_suggested_prompts`, `aivis_trigger_page_run`, `aivis_run_project_prompts`.
+
+**`analyze:read`** — `analyze_list_projects`, `analyze_list_crawls`, `analyze_get_crawl_summary`, `analyze_list_segments`, `analyze_list_reports`, `analyze_get_report_metadata`, `analyze_list_report_rows`, `analyze_get_url_detail`, `analyze_get_health_trend`, `analyze_get_report_trend`, `analyze_list_tasks`, `analyze_get_task`, `analyze_get_report_export`, `analyze_list_single_page_requests`, `analyze_get_single_page_request`, `analyze_list_custom_metric_generations`, `analyze_get_custom_metric_generation`.
+
+**`analyze:write`** — `analyze_create_segment`, `analyze_update_segment`, `analyze_delete_segment`, `analyze_create_report_task`, `analyze_update_task`, `analyze_delete_task`, `analyze_export_report`, `analyze_run_crawl`, `analyze_create_single_page_request`, `analyze_generate_task_ticket_details`, `analyze_create_custom_metric_generation`, `analyze_update_custom_metric_generation`, `analyze_delete_custom_metric_generation`, `analyze_request_custom_metric_generation`, `analyze_run_custom_metric_generation_tests`, `analyze_link_custom_metric_container_to_project`, `analyze_update_custom_metric_container_project`, `analyze_unlink_custom_metric_container_from_project`.
+
+**`analyze:external`** — `analyze_list_jira_authentications`, `analyze_list_jira_projects`, `analyze_list_jira_issue_types`, `analyze_get_jira_create_field_metadata`, `analyze_search_jira_issues`, `analyze_create_task_external_link`, `analyze_delete_task_external_link`.
+
+**`analyze:admin`** — `analyze_create_project`, `analyze_update_project`, `analyze_clone_project`.
+
+Per-tool descriptions and input schemas come back over the wire on `tools/list`; that is the canonical reference.
 
 ### Pointing at a different MCP URL (staging / self-hosted / scoped)
 
@@ -146,7 +180,7 @@ The plugin defaults to production (`https://mcp.lumar.io/mcp`), but the URL is j
 Common reasons to override:
 
 - Staging server (e.g. `https://mcp.staging.lumar.io/mcp`) while testing pre-release toolsets
-- A scoped URL like `https://mcp.lumar.io/mcp/x/ai-visibility` to restrict the connector to one product surface
+- A scoped URL like `https://mcp.lumar.io/mcp/x/ai-visibility:read,analyze:read` to restrict the connector to selected read-only surfaces
 - A self-hosted or tunnelled MCP endpoint (`http://localhost:8787/mcp`, an ngrok URL, etc.)
 
 Edit `plugins/lumar-analytics/mcp.json`:
@@ -171,7 +205,7 @@ If your custom endpoint needs extra headers (e.g. forcing a toolset scope withou
       "type": "http",
       "url": "https://mcp.lumar.io/mcp",
       "headers": {
-        "X-MCP-Toolsets": "ai-visibility,context"
+        "X-MCP-Toolsets": "ai-visibility:read,analyze:read"
       }
     }
   }
@@ -209,76 +243,23 @@ The same approach works for Claude Code (`/plugin marketplace add /path/to/lumar
 
 > Keep your local edit on a branch (or just don't commit `mcp.json`) so a `git pull` doesn't clobber it — and remember to switch back to production before opening any PRs against this repo.
 
-### Tools currently exposed
+### Identifiers and pagination
 
-| Tool                                    | Toolset         | Purpose                                                                                                           |
-| :-------------------------------------- | :-------------- | :---------------------------------------------------------------------------------------------------------------- |
-| `lumar_get_me`                          | `context`       | Authenticated user, accessible accounts, per-product entitlements                                                 |
-| `aivis_list_projects`                   | `ai-visibility` | List AI Visibility projects                                                                                       |
-| `aivis_create_project`                  | `ai-visibility` | Create a project with a primary brand                                                                             |
-| `aivis_search_topics`                   | `ai-visibility` | Lightweight topic name lookup (id + name)                                                                         |
-| `aivis_list_topics`                     | `ai-visibility` | List topics with per-topic visibility metrics                                                                     |
-| `aivis_bulk_create_topics`              | `ai-visibility` | Atomically create up to 50 topics + prompts in one call                                                           |
-| `aivis_list_prompts`                    | `ai-visibility` | List prompts with analytics                                                                                       |
-| `aivis_list_brands`                     | `ai-visibility` | List/search brands with visibility metrics                                                                        |
-| `aivis_get_top_brands`                  | `ai-visibility` | Top brands ranked by visibility score                                                                             |
-| `aivis_get_brand_signals`               | `ai-visibility` | Brand citations and/or mentions (citation rows now include `pageRunStatus` + `latestRunAt`)                       |
-| `aivis_get_visibility_scores`           | `ai-visibility` | Time-series visibility scores                                                                                     |
-| `aivis_list_prompt_runs`                | `ai-visibility` | Prompt execution runs                                                                                             |
-| `aivis_get_prompt_run_details`          | `ai-visibility` | Full AI answer, mentions, citations, scores for a single run                                                      |
-| `aivis_list_brand_domains`              | `ai-visibility` | List domains attached to a brand                                                                                  |
-| `aivis_create_brand_domain`             | `ai-visibility` | Attach a domain to an existing brand for citation attribution                                                     |
-| `aivis_update_brand_domain`             | `ai-visibility` | Update an attached brand domain                                                                                   |
-| `aivis_delete_brand_domain`             | `ai-visibility` | Detach a domain from a brand                                                                                      |
-| `aivis_update_project`                  | `ai-visibility` | Update project settings (name, cadence, autoCrawl, serpDiscovery, autoDiscoveryThreshold, freshnessThresholdDays) |
-| `aivis_delete_project`                  | `ai-visibility` | Soft-delete a project — destructive                                                                               |
-| `aivis_run_project_prompts`             | `ai-visibility` | Force a full prompt-run pass across every prompt × enabled provider, bypassing the schedule                       |
-| `aivis_update_topic`                    | `ai-visibility` | Rename a topic                                                                                                    |
-| `aivis_delete_topic`                    | `ai-visibility` | Soft-delete a topic and its prompts/runs — destructive                                                            |
-| `aivis_create_prompt`                   | `ai-visibility` | Add a single prompt to an existing topic; optional `suggestedPromptId` consumes a suggestion atomically           |
-| `aivis_delete_prompt`                   | `ai-visibility` | Soft-delete a prompt and its runs — destructive                                                                   |
-| `aivis_update_brand`                    | `ai-visibility` | Reclassify a brand as `Own` / `Competitor` / `Other`                                                              |
-| `aivis_merge_brands`                    | `ai-visibility` | Merge variant brands into a target brand — destructive; cannot merge a primary brand                              |
-| `aivis_promote_brand`                   | `ai-visibility` | Promote a merged variant to become the new primary brand                                                          |
-| `aivis_unmerge_brand`                   | `ai-visibility` | Detach a merged brand so it appears as a separate entity again                                                    |
-| `aivis_get_suggested_topics`            | `ai-visibility` | Read cached LLM-generated topic suggestions for a brand                                                           |
-| `aivis_generate_suggested_topics`       | `ai-visibility` | Trigger a fresh batch of LLM-generated topic suggestions                                                          |
-| `aivis_get_suggested_prompts`           | `ai-visibility` | Read cached LLM-generated prompt suggestions for a topic                                                          |
-| `aivis_generate_suggested_prompts`      | `ai-visibility` | Trigger a fresh batch of LLM-generated prompt suggestions                                                         |
-| `aivis_list_discovered_urls`            | `ai-visibility` | SERP discovery feed — every URL surfaced in AI answers / grounding before per-URL evaluation                      |
-| `aivis_list_serp_discovery_runs`        | `ai-visibility` | Job-level view of SERP discovery (status, failureReason, domain)                                                  |
-| `aivis_list_active_providers`           | `ai-visibility` | AI providers that produced ≥1 finished run for a project — use to populate provider filters                       |
-| `aivis_list_active_countries`           | `ai-visibility` | Country codes (and worldwide) whose prompts produced finished runs                                                |
-| `aivis_get_page_scores`                 | `ai-visibility` | Per-URL content-evaluation scores (precision/recall/quality/trust, evergreen health, topical opportunity, …)      |
-| `aivis_list_page_runs`                  | `ai-visibility` | Per-URL content-evaluation jobs; `verbose: true` adds LLM reasoning + per-snippet/per-competitor arrays           |
-| `aivis_trigger_page_run`                | `ai-visibility` | Kick off a fresh content evaluation for a URL                                                                     |
-| `aivis_list_prompt_provider_visibility` | `ai-visibility` | Per-AI-provider visibility breakdown per prompt                                                                   |
-| `aivis_list_search_queries`             | `ai-visibility` | The queries AI engines actually issued while answering prompts (with comparisonTimeframe support)                 |
-| `aivis_list_google_connections`         | `ai-visibility` | List the user's Google OAuth connections + the GSC sites each token can read                                      |
-| `aivis_list_gsc_properties`             | `ai-visibility` | List GSC properties attached to an AI Visibility project                                                          |
-| `aivis_attach_gsc_property`             | `ai-visibility` | Bind a GSC `siteUrl` to a project so page runs compute `gscQueryScore` / `gscQueryEvaluations`                    |
-| `aivis_update_gsc_property`             | `ai-visibility` | Change filters / search type / lookback on an existing GSC binding                                                |
-| `aivis_detach_gsc_property`             | `ai-visibility` | Remove a GSC binding — destructive                                                                                |
-| `aivis_get_account_settings`            | `ai-visibility` | Read `aiProvidersSyncWithSubscription`, `scheduleType`, `timezone` — check before per-project provider mutations  |
-| `aivis_list_ai_providers`               | `ai-visibility` | Catalog of every AI provider; `included` flag = part of the subscription addon                                    |
-| `aivis_list_project_ai_providers`       | `ai-visibility` | Providers currently linked to a project (regardless of run activity)                                              |
-| `aivis_enable_project_ai_provider`      | `ai-visibility` | Link a provider to a project — may be reverted under subscription-sync mode                                       |
-| `aivis_disable_project_ai_provider`     | `ai-visibility` | Unlink a provider — destructive; may be reverted under subscription-sync mode                                     |
-| `aivis_sync_project_ai_providers`       | `ai-visibility` | Reset a project's linked providers to match the subscription — on-demand sync                                     |
-| `analyze_list_projects`                 | `analyze`       | List Analyze crawl projects for an account                                                                        |
-| `analyze_list_crawls`                   | `analyze`       | List crawl history for a project (status, timing, URL count)                                                      |
-| `analyze_run_crawl`                     | `analyze`       | Trigger a new crawl bypassing the schedule (returns the queued crawl id + dashboard URL; consumes URL quota)      |
-| `analyze_get_crawl_summary`             | `analyze`       | Crawl metadata + report category snapshot + segment generation status                                             |
-| `analyze_list_segments`                 | `analyze`       | Project segments or crawl segment generation statuses                                                             |
-| `analyze_list_reports`                  | `analyze`       | Report stats for a crawl/segment (totals, not rows)                                                               |
-| `analyze_get_report_metadata`           | `analyze`       | Report definition + filterable metrics with allowed predicates                                                    |
-| `analyze_list_report_rows`              | `analyze`       | URL rows for a report with structured `filterRules` and sort                                                      |
-| `analyze_get_url_detail`                | `analyze`       | ResourceDetail view: crawl metrics, accessibility, site speed, GSC, structured data                               |
-| `analyze_get_health_trend`              | `analyze`       | Health score time-series for a report category                                                                    |
-| `analyze_list_tasks`                    | `analyze`       | Project- or account-scoped remediation tasks                                                                      |
-| `analyze_create_report_task`            | `analyze`       | Create a task linked to a report + optional structured filter                                                     |
-| `analyze_export_report`                 | `analyze`       | Async CSV/XML export with optional filter and selected columns                                                    |
-| `analyze_get_report_export`             | `analyze`       | Poll export status and fetch the file URL once Generated                                                          |
+Every entity in a response carries a single numeric `id`; pass that value as the matching `*Id` on follow-up tools. The exception is `analyze_export_report`, whose `reportDownload.id` is an opaque polling token for `analyze_get_report_export`.
+
+Paginated responses include `pagination.next_cursor`, `pagination.has_next_page`, `pagination.returned`, and `pagination.total_count`. Pass `next_cursor` as the next call's `cursor`. Defaults are usually `limit=20`, max `limit=100`.
+
+### Verbose responses
+
+Some tools trim large fields by default and expose `verbose: true`:
+
+| Tool                           | What `verbose=true` adds                                                                                                                           |
+| :----------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `analyze_list_reports`         | Long report-template description, definition, effect, impact, and solutions text per row                                                            |
+| `analyze_get_single_page_request` | Full crawl settings snapshot, raw outputs, container versions, response headers, and signed output URLs                                             |
+| `analyze_get_custom_metric_generation` | Generated handler source / download URL for the linked custom metric container version                                                        |
+| `aivis_get_prompt_run_details` | Full `fullAnswerText` and raw citation / mention / search-query arrays                                                                              |
+| `aivis_list_page_runs`         | LLM reasoning text plus per-snippet precision, per-competitor uniqueness, per-model brand-mention, sentiment, GSC, and QDF evaluation arrays        |
 
 ### Timeframes
 

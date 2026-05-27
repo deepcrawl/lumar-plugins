@@ -70,4 +70,4 @@ Markdown response:
 - **Predicate mismatch** — applying a `contains` predicate to a numeric metric returns no rows or an error. Always go through `analyze_get_report_metadata` first; the `allowedPredicates` list is authoritative.
 - **`filterRules` cap is 20** — collapse near-duplicate predicates rather than padding the array.
 - **`reportType` defaults to `Basic`** — for a comparison crawl, "newly added issues" lives under `reportType: "Added"`, not Basic. Ask the user when the crawl is a comparison.
-- **No update mutation for tasks** — once created, the task can only be edited in the Lumar dashboard. Set fields correctly the first time.
+- **Task updates are separate** — create the scoped task here, then use `analyze-task-review` for later status, assignee, deadline, priority, or close/reopen changes.

@@ -1,13 +1,11 @@
 ---
 name: analyze-task-review
-description: Review Lumar Analyze remediation tasks — list active tasks across an account or project, prioritise by deadline and severity, and flag overdue or stale work. Use this skill whenever someone asks "what tasks do I have open?", "show me the SEO backlog", "what's assigned to <person>?", "any tasks due this week?", or wants a prioritised view of remediation work. Also trigger when users want to clean up the task list and decide what to tackle next.
+description: Review and maintain Lumar Analyze remediation tasks — list active tasks across an account or project, prioritise by deadline and severity, update task fields, and close completed work. Use this skill whenever someone asks "what tasks do I have open?", "show me the SEO backlog", "what's assigned to <person>?", "any tasks due this week?", "mark this done", "reassign this task", or wants to clean up the task list.
 ---
 
 # Analyze Task Review
 
-Surface Analyze remediation tasks (project- or account-scoped), prioritise them, and call out anything overdue, deadline-imminent, or unassigned.
-
-**This skill is read-only.** The Lumar MCP server exposes task **creation** (via `analyze-report-deep-dive` → `analyze_create_report_task`) but **not** task updates. Status, priority, assignee, and deadline changes happen in the Lumar dashboard.
+Surface Analyze remediation tasks (project- or account-scoped), prioritise them, and call out anything overdue, deadline-imminent, or unassigned. Also handles direct maintenance requests such as changing priority, assignees, deadlines, status, and closing tasks.
 
 ## Parameters
 
@@ -17,6 +15,7 @@ Surface Analyze remediation tasks (project- or account-scoped), prioritise them,
 - **priority**: Optional `Critical`, `High`, `Medium`, `Low`, `Note`.
 - **assignee**: Optional email or name to filter by.
 - **active_only**: Default `true` (excludes tasks with `fixedAt` set). Set `false` only when the user explicitly wants the full history.
+- **mutation**: Optional task update request (status, priority, assignees, deadline, fixed date, description/how-to-fix, delete).
 
 ## Step 0: Resolve scope
 
@@ -49,7 +48,25 @@ Apply assignee filter (if given) before bucketing — match against `assignees[]
 
 Each task carries `reportTemplate.code` + the saved filter rules. Where useful, name the report in plain English (e.g. "duplicate_pages → Duplicate pages report on crawl <id>") so the user remembers what each task is about. If `identified` is set, include the count.
 
-## Step 4: Deliverable
+## Step 4: Optional task maintenance
+
+For direct update requests, resolve the task ID first:
+
+1. If the user supplied a task ID, call `analyze_get_task`.
+2. Otherwise call `analyze_list_tasks` with `query` or the current filtered list and ask if more than one task plausibly matches.
+3. Use `analyze_update_task` for field edits. Only pass fields the user asked to change.
+
+Common updates:
+
+- Close/fix: `analyze_update_task` with `status: "Done"` and/or `fixedAt` set to the resolution timestamp. Use the current timestamp only when the user says it is fixed now.
+- Reopen: `analyze_update_task` with `fixedAt: null` and the requested active status.
+- Reassign: pass the full replacement `assignedTo` email list. An empty array or `null` clears assignees.
+- Clear nullable fields: pass `null` for `deadlineAt`, `fixedAt`, `description`, `howToFix`, `status`, `position`, or `assignedTo`.
+- Notify assignees only when the user asks; default `notifyAssignees: false`.
+
+Use `analyze_delete_task` only when the user explicitly asks to delete and confirms after you explain it permanently deletes the task and external links. Prefer closing via `analyze_update_task`.
+
+## Step 5: Deliverable
 
 Markdown:
 
@@ -57,11 +74,12 @@ Markdown:
 2. **Overdue** table — title, priority, deadline, days late, assignees, report.
 3. **Due this week** table — same columns.
 4. **High-priority unscheduled** — items needing deadlines/assignees.
-5. **Recommended next steps** — 2–3 specific moves. For status/priority changes, point at the Lumar dashboard URL (each task carries enough context to deep-link via the Core UI).
+5. **Recommended next steps** — 2–3 specific moves. If you changed tasks, include a short "Changes made" list with task IDs and updated fields.
 
 ## Common pitfalls
 
-- **No update mutation** — be explicit when the user asks to "mark this done" or "reassign". Direct them to the dashboard; don't pretend the change happened.
+- **Updates replace lists** — `assignedTo` is a full replacement list, not a patch. Preserve existing assignees unless the user asked to replace or clear them.
+- **Delete is destructive** — prefer `status: Done` / `fixedAt` unless the user clearly wants deletion.
 - **`activeOnly=true` by default** — completed tasks (`fixedAt` set) are excluded. Switch off only when the user wants history.
 - **Account-scope is broad** — multi-project accounts can have hundreds of tasks. Default to `priority: ["Critical", "High"]` + a short window unless the user explicitly wants everything.
 - **`segmentId` filter** only matters for projects with segments enabled; passing it to a project without segments narrows results to nothing.

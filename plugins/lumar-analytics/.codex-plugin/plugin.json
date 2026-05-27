@@ -1,7 +1,7 @@
 {
   "name": "lumar-analytics",
   "version": "0.2.0",
-  "description": "Bring Lumar analytics into Codex: AI Visibility skills (audit, competitor benchmark, topic bootstrap, prompt investigation, trend) plus Lumar Analyze skills (crawl health, report deep-dive, URL investigation, export, task review)",
+  "description": "Lumar analytics skills for AI Visibility and Lumar Analyze, backed by the unified Lumar MCP server.",
   "author": {
     "name": "Lumar",
     "email": "support@lumar.io"
