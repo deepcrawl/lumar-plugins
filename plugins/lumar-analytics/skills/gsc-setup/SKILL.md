@@ -7,6 +7,8 @@ description: Connect a Google Search Console property to an AI Visibility projec
 
 Wire a Google Search Console property to an AI Visibility project. Once attached, page runs gain `gscQueryScore` and `gscQueryEvaluations` (per-query relevance scoring against the page's content) — without a binding, those fields are always null.
 
+In the UI, GSC setup lives in the self-serve Lumar GEO app only (not Lumar Analyze); updating an existing binding's filters is MCP/API-only. All tools work over MCP regardless.
+
 ## Parameters
 
 - **project**: Which AI Visibility project to attach to — name or domain. Ask if ambiguous.
@@ -15,7 +17,7 @@ Wire a Google Search Console property to an AI Visibility project. Once attached
 
 ## Step 0: Resolve account + project
 
-1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple).
+1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple). For Lumar system admins no account list is returned — resolve the account by name with `lumar_search_accounts` instead.
 2. `aivis_list_projects` to resolve the project. Capture `projectId`.
 
 ## Step 1: Discover available Google connections + GSC sites
@@ -51,7 +53,7 @@ Before attaching, see what's already there:
 When the user already has a binding and wants to change filters:
 
 1. `aivis_update_gsc_property` (`gscPropertyId`, only the fields to change).
-2. Pass `includeQueries: []` or `excludeQueries: []` to clear an existing filter list — omitting them leaves them untouched.
+2. Pass `includeQueries: []` or `excludeQueries: []` to clear an existing filter list, and `country: null` to clear a country filter (revert to all-countries) — omitting a field leaves it untouched.
 3. Re-pointing `siteUrl` or `googleConnectionId` is allowed but unusual — usually detach + re-attach is clearer.
 
 ## Step 5: Detach (when asked)

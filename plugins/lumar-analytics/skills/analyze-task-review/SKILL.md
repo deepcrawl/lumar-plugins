@@ -19,7 +19,7 @@ Surface Analyze remediation tasks (project- or account-scoped), prioritise them,
 
 ## Step 0: Resolve scope
 
-1. `lumar_get_me` → Analyze-entitled account (auto-pick if single, ask if multiple).
+1. `lumar_get_me` → Analyze-entitled account (auto-pick if single, ask if multiple). System admins get no account list — resolve the account by name with `lumar_search_accounts`.
 2. If `scope=project`, `analyze_list_projects` with `query` to resolve `projectId`.
 
 ## Step 1: Fetch tasks
@@ -30,23 +30,23 @@ Surface Analyze remediation tasks (project- or account-scoped), prioritise them,
 - `activeOnly`, `status`, `priority`, `query` (substring on title), `segmentId` as supplied.
 - `limit: 100` to minimise pagination on review-style use.
 
-If `pagination.has_next_page`, mention the cap and offer to page further only if the user asks.
+If `pageInfo.hasNextPage`, mention the cap and offer to page further only if the user asks.
 
 ## Step 2: Prioritise client-side
 
 Sort and bucket the returned tasks:
 
-- **Overdue** — `deadline < now` and `status != "Done"`.
-- **Due this week** — `deadline` within next 7 days.
+- **Overdue** — `deadlineAt < now` and `status != "Done"`.
+- **Due this week** — `deadlineAt` within next 7 days.
 - **High signal, no deadline** — `priority` in (`Critical`, `High`) with no `deadlineAt`. Flag for assignment.
-- **Stale** — `status: "InProgress"` with `updatedAt` > 14 days ago (if returned). Suggest a status check.
-- **Unassigned** — `assignees` empty.
+- **Stale** — `status: "InProgress"` with `updatedAt` > 14 days ago. Suggest a status check. (Results come back newest-updated first.)
+- **Unassigned** — `assignedTo` empty.
 
-Apply assignee filter (if given) before bucketing — match against `assignees[].email` or display name.
+Apply assignee filter (if given) before bucketing — `assignedTo` is a plain list of email addresses; match against it.
 
 ## Step 3: Surface report context
 
-Each task carries `reportTemplate.code` + the saved filter rules. Where useful, name the report in plain English (e.g. "duplicate_pages → Duplicate pages report on crawl <id>") so the user remembers what each task is about. If `identified` is set, include the count.
+Each task carries `reportTemplate.code` + the saved `filters`. Where useful, name the report in plain English (e.g. "duplicate_pages → Duplicate pages report on crawl <id>") so the user remembers what each task is about. If `identified` is set, include the count.
 
 ## Step 4: Optional task maintenance
 
@@ -81,5 +81,5 @@ Markdown:
 - **Updates replace lists** — `assignedTo` is a full replacement list, not a patch. Preserve existing assignees unless the user asked to replace or clear them.
 - **Delete is destructive** — prefer `status: Done` / `fixedAt` unless the user clearly wants deletion.
 - **`activeOnly=true` by default** — completed tasks (`fixedAt` set) are excluded. Switch off only when the user wants history.
-- **Account-scope is broad** — multi-project accounts can have hundreds of tasks. Default to `priority: ["Critical", "High"]` + a short window unless the user explicitly wants everything.
+- **Account-scope is broad** — multi-project accounts can have hundreds of tasks. `priority` accepts a single value, not a list — filter to `priority: "Critical"` (or fetch broadly and bucket client-side) unless the user explicitly wants everything.
 - **`segmentId` filter** only matters for projects with segments enabled; passing it to a project without segments narrows results to nothing.

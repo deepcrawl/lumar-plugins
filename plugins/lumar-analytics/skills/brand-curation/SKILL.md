@@ -14,13 +14,13 @@ Tidy a project's brand list so analytics (top-brands ranking, competitor benchma
 
 ## Step 0: Resolve account + project
 
-1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple).
+1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple). For Lumar system admins no account list is returned — resolve the account by name with `lumar_search_accounts` instead.
 2. `aivis_list_projects` to resolve the project. Capture `projectId` and the primary brand id for reference.
 
 ## Step 1: See the current brand list
 
-1. `aivis_list_brands` with the project, default timeframe `last_30d`. Note `type` (`Own` | `Competitor` | `Other`), `primary` flag, `domain`, and `avgVisibilityScore` per brand.
-2. `aivis_get_top_brands` with the primary brand id to get the ranked view — useful when the user says "fix my leaderboard".
+1. `aivis_list_brands` with the project, default timeframe `last_30d`. Note `type` (`Own` | `Competitor` | `Other`), `primary` flag, `domain`, and the visibility metrics per brand — headline `avgPresenceRate` and `avgQualityScore`, plus the composite `avgVisibilityIndex` (`avgVisibilityScore` is its deprecated alias). Use `query` to filter by name and `types` (array of `Own` / `Competitor` / `Other`) to review one class at a time — e.g. `types: ["Other"]` to sweep unclassified auto-discovered brands.
+2. `aivis_get_top_brands` with the primary brand id to get the ranked view (ranked by `avgVisibilityIndex`) — useful when the user says "fix my leaderboard".
 3. Look for obvious duplicates: variants of the same name (`Lumar` / `Lumar Inc` / `LumarSEO`), the brand surfacing under multiple casings or with/without "Ltd"/"Inc", domain typos, etc. List them for the user to confirm.
 
 ## Step 2: Pick the workflow
@@ -61,8 +61,8 @@ When the user says "undo the merge" / "split <X> back out":
 
 When the user says "attribute citations from <domain> to <brand>" or "this domain belongs to us":
 
-1. Confirm the brand id via `aivis_list_brands` (search by name).
-2. `aivis_create_brand_domain` (`brandId`, bare hostname, optional `includeSubdomains: true` when the brand owns every subdomain). Manage existing domains via `aivis_list_brand_domains` / `aivis_update_brand_domain` / `aivis_delete_brand_domain`.
+1. Confirm the brand id via `aivis_list_brands` (use the `query` param to search by name).
+2. `aivis_create_brand_domain` (`brandId`, bare hostname — protocols and paths are rejected, optional `includeSubdomains: true` when the brand owns every subdomain). Manage existing domains via `aivis_list_brand_domains` / `aivis_update_brand_domain` / `aivis_delete_brand_domain`. Note: deleting the last domain on a primary brand is refused — the primary must stay anchored to at least one domain.
 
 ## Step 3: Verify the result
 

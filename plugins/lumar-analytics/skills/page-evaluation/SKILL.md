@@ -16,7 +16,7 @@ Produce a deep-dive report on one URL's content evaluation in AI Visibility: agg
 
 ## Step 0: Resolve account, project, brand
 
-1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple).
+1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple). For Lumar system admins no account list is returned — resolve the account by name with `lumar_search_accounts` instead.
 2. `aivis_list_projects` to resolve the project.
 3. `aivis_list_brands` to confirm the brand id — usually the project's primary brand.
 
@@ -25,7 +25,8 @@ Produce a deep-dive report on one URL's content evaluation in AI Visibility: agg
 Page runs only exist for URLs that have been crawled. Two ways to check:
 
 1. `aivis_list_page_runs` (`projectId`, `url`, `limit: 5`, newest-first). If the response has rows, evaluation data exists.
-2. Alternatively, `aivis_get_brand_signals` (`type: citations`) filtered to the URL — if the citation row has `pageRunStatus: Completed` and a recent `latestRunAt`, scores are available.
+2. Alternatively, `aivis_get_brand_signals` (`type: citations`) — the tool has no URL filter, so scan the returned citation rows for the URL; if its row has `pageRunStatus: Completed` and a recent `latestRunAt`, scores are available.
+3. For URLs that surfaced via SERP discovery, `aivis_list_discovered_pages` (one row per URL) also carries `pageRunStatus` — null/`Discovered` means the URL hasn't been content-evaluated yet.
 
 **If no run exists** for the URL:
 
@@ -41,8 +42,8 @@ Fire Step 2 + Step 3 in parallel — they're independent reads.
 
 1. `aivis_get_page_scores` (`projectId`, `brandId`, `url`, `timeframe`) — single-row response averaged across runs in the window.
 2. Report the scoreboard (0–100 where available):
-   - **Overall**: `avgVisibilityScore`
-   - **Content quality side**: `avgPrecisionScore`, `avgRecallScore`, `avgUniquenessScore`, `avgQualityScore`, `avgTrustScore`
+   - **Overall**: `avgVisibilityIndex` (composite ranking blend; `avgVisibilityScore` is its deprecated alias)
+   - **Content quality side**: `avgPrecisionScore`, `avgRecallScore`, `avgUniquenessScore`, `avgQualityScore` (page content quality — not the brand-visibility quality split), `avgTrustScore`
    - **Brand side**: `avgCitationQualityScore`, `avgBrandMentionScore`, `avgBrandSentimentScore`, `avgBrandPosition` (1 = first cited; lower is better), `avgBrandPositionScore`, `totalBrandCitations`
    - **Discoverability**: `avgEvergreenHealthScore`, `avgTopicalOpportunityScore`, `avgQdfScore` (query-deserves-freshness), `avgGscQueryScore` (real-search-query relevance — only populated when a GSC property is attached; see the `gsc-setup` skill)
    - **Coverage**: `topicNames` (which topics' prompts cite this URL), `aiProviderTypes` (which AI engines cite it), `totalRuns`, `latestRunAt`.
@@ -93,7 +94,7 @@ Project: <project name>  Brand: <brand name>
 Latest run: <status> at <createdAt>  source=<Citation|Manual|SerpDiscovery>
 
 Scoreboard (avg over <timeframe>, <totalRuns> run(s)):
-  Overall visibility: <score>/100  [red|amber|green]
+  Overall visibility index: <score>/100  [red|amber|green]
   Content:  precision <n>, recall <n>, uniqueness <n>, quality <n>, trust <n>
   Brand:    citation-quality <n>, mention <n>, sentiment <n>, position <n> (rank), total citations <n>
   Discovery: evergreen <n>, topical-opportunity <n>, QDF <n>, GSC-query <n or "n/a — no GSC binding">

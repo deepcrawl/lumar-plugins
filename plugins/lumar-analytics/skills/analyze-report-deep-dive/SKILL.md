@@ -17,7 +17,7 @@ Filter and inspect URLs inside one Analyze report, then (optionally) create a tr
 
 ## Step 0: Resolve account, project, crawl, and report
 
-1. `lumar_get_me` → pick Analyze-entitled account (ask if multiple).
+1. `lumar_get_me` → pick Analyze-entitled account (ask if multiple; system admins get no account list — resolve by name with `lumar_search_accounts`).
 2. `analyze_list_projects` (`query`) → pick project. Capture `projectId`.
 3. `analyze_list_crawls` (`projectId`, `status: "finished"`, `limit: 5`) → latest finished crawl unless named.
 4. Resolve the **report template code**: if the user named a code, use it directly; otherwise `analyze_list_reports` (`crawlId`, `query: <user phrase>`, `limit: 10`) and ask if multiple match. Never silently pick.
@@ -30,9 +30,11 @@ If the user gave filters in natural language, map them to `{metricCode, predicat
 
 ## Step 2: Pull filtered rows
 
-`analyze_list_report_rows` (`crawlId`, `reportTemplateCode`, optional `segmentId`, optional `reportType`, `filterRules`, optional `sort`, `limit: 100`). Use `filterOperator: "or"` only when the user explicitly asked for OR semantics — default is AND.
+`analyze_list_report_rows` (`crawlId`, `reportTemplateCode`, optional `segmentId`, optional `reportType`, `filterRules`, optional `sort`, `limit`). Use `filterOperator: "or"` only when the user explicitly asked for OR semantics — default is AND. For mixed AND/OR/NOT trees the flat shorthand can't express, pass a raw nested `filter` instead (mutually exclusive with `filterRules`).
 
-If `pagination.has_next_page` is true and the user asked for "all", continue paging — but warn first if the total looks large (> 500 rows); offer to export instead (suggest invoking the `analyze-export` skill).
+Rows are projected to the report template's `defaultMetrics` plus the identity keys `url`/`urlDigest` by default — the same columns the Core UI grid shows. If the analysis needs other columns (e.g. the metric you filtered or sorted on), pass `metrics: ["code1", "code2"]`, or `metrics: ["all"]` for every metric on the row. Default page size is 10; raise `limit` (max 100) only once a narrowing filter and/or column projection is in place.
+
+If `pageInfo.hasNextPage` is true and the user asked for "all", continue paging — but warn first if the total looks large (> 500 rows); offer to export instead (suggest invoking the `analyze-export` skill).
 
 ## Step 3: Surface patterns
 
@@ -41,7 +43,7 @@ Don't dump 100 rows verbatim. Pick a useful lens based on the metrics available:
 - **Status code distribution** — if `statusCode` is in the rows, group counts by code.
 - **Top offending paths / hosts** — group rows by URL prefix or path segment.
 - **Worst metric values** — for numeric reports (page weight, time-to-interactive), call out the top 5.
-- **Sample rows** — show the 5–10 most representative rows in a table; link out via `coreUiUrl` if returned.
+- **Sample rows** — show the 5–10 most representative rows in a table. The response carries a top-level `coreUIUrl` linking to the same report (and `reportType` slice) in the Lumar dashboard — share it verbatim; never assemble report URLs from ids and codes yourself.
 
 ## Step 4: Cross-crawl compare (only if asked)
 
@@ -52,7 +54,7 @@ There is **no `analyze_compare_crawls` tool**. To compare the same report across
 If the user opted in:
 
 1. Confirm: title, optional description, priority (default `Low`; suggest `High` if total ≥ 100 URLs or status codes ≥ 500), assignees (email list), deadline (ISO-8601), and whether to notify.
-2. `analyze_create_report_task` (`crawlId`, `reportTemplateCode`, `title`, plus the same `filterRules` + `filterOperator` + `reportType` + `segmentId` from Step 2 — this is how the Lumar UI scopes the task to the same URL set).
+2. `analyze_create_report_task` (`crawlId`, `reportTemplateCode`, `taskType`, `title`, plus the same `filterRules` + `filterOperator` + `reportType` + `segmentId` from Step 2 — this is how the Lumar UI scopes the task to the same URL set). `taskType` is required: `Default` = filter task, recomputed each crawl (the usual choice here); `TaggedURLs` snapshots a fixed URL set and needs the account's tagged-URLs feature plus a Crawl URLs report (e.g. `all_pages`).
 3. Echo the returned task ID and the filter that was attached.
 
 ## Step 6: Deliverable

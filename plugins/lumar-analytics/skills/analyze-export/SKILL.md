@@ -37,7 +37,7 @@ Echo the resolved column list back so the user can correct it before kicking off
 
 - `crawlId`, `reportTemplateCode` (required)
 - `reportType` (default `Basic`)
-- `segmentId`, `filterRules`, `filterOperator`, `selectedMetrics`, `outputType`, `fileName`, `limit` as supplied
+- `segmentId`, `filterRules`, `filterOperator` (or a raw nested `filter` for mixed AND/OR/NOT trees — supply one or the other), `selectedMetrics`, `outputType`, `fileName`, `limit` as supplied
 - `unwindMetrics`: only when the user explicitly needs an array/object metric flattened into rows (max 1 per export).
 
 Capture the returned `reportDownload.id` (opaque), `status` (will be `Generating`), and `createdAt`.
@@ -55,14 +55,14 @@ Report back to the user:
 
 `analyze_get_report_export` (`reportDownloadId`). Branch on `status`:
 
-- `Generated` — return `fileUrl` and `expiresAt`. Remind the user that download links expire.
-- `Generating` — tell them it's still in progress; suggest trying again in 30 s.
-- `Failed` — explain the export failed; offer to retry with a smaller `limit` or narrower filter.
+- `Generated` — return `fileURL`. It's a short-lived presigned link — remind the user it expires. An optional `fileName` override (same 3–218 char charset) can be passed here to rename the download.
+- `Generating` (or `Draft`) — tell them it's still in progress; suggest trying again in 30 s.
+- There is **no `Failed` status** — if an export sits in `Generating` unusually long, offer to kick off a fresh export with a smaller `limit` or narrower filter.
 
 ## Common pitfalls
 
 - **`fileName` charset is strict** — alphanumerics, underscore, hyphen only; no extension. The server rejects spaces, dots, and slashes.
 - **`unwindMetrics` is capped at 1** — for two array metrics, run two exports.
-- **The link expires** — `expiresAt` is short. Don't cache it; re-fetch via `analyze_get_report_export` if the user comes back hours later.
+- **The link expires** — `fileURL` is a short-lived presigned URL. Don't cache it; re-fetch via `analyze_get_report_export` to mint a fresh one if the user comes back hours later.
 - **Compressed formats default to ZIP** — `outputType: "CsvGzip"` or `CsvTarGz` is useful for very large reports where Zip's per-entry size matters.
 - **No long-polling**: the polling responsibility is the user's (or a follow-up turn's), not this skill's. Don't burn assistant turns busy-waiting.

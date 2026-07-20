@@ -15,42 +15,44 @@ This skill uses **Lumar MCP tools** exclusively. All tool references below (`lum
 
 - **brand_or_project**: Brand name, project name, or "my project".
 - **timeframe**: Default `last_90d` so trend is visible. Accepts named windows or `{ start, end }`.
-- **granularity**: How to bucket the series — `day`, `week`, or `month`. Default `week` for `last_90d`+, `day` for shorter windows.
+- **granularity**: How to bucket the series — `Day`, `Week`, or `Month` (the tool's `granularity` enum; default `Day`). Prefer `Week` for `last_90d`+, `Day` for shorter windows.
 
 ## Step 0: Resolve account, project, and brand
 
-1. `lumar_get_me` → pick AI-Visibility-entitled account.
+1. `lumar_get_me` → pick AI-Visibility-entitled account. (System admins get no account list — resolve by name with `lumar_search_accounts`.)
 2. `aivis_list_projects` → pick project. Note the primary brand.
 
 ## Step 1: Pull the score time series
 
-`aivis_get_visibility_scores` for the primary brand over `timeframe`, with the requested granularity and `previousPeriod` enabled.
+`aivis_get_visibility_scores` for the primary brand over `timeframe`, with the requested `granularity`, passing `comparisonTimeframe` set to an equal-length prior window so each trend returns a `previousPeriod` for delta calculation.
+
+Each datapoint carries three headline metrics: `avgPresenceRate` (% of runs the brand appeared, 0–100), `avgQualityScore` (75 % mention quality + 25 % citation quality), and `avgVisibilityIndex` (the composite ranking blend; `avgVisibilityScore` is its deprecated alias). Track the visibility index as the headline trend line.
 
 Render a compact text-mode chart (sparkline characters or a simple table — markdown can't draw real charts). Annotate:
 
-- Current vs prior-period score and delta.
+- Current vs prior-period index and delta.
 - Max and min points in the window with their dates.
 - Any single-bucket move ≥ 5 points (up or down) — these are step changes worth investigating.
 
 ## Step 2: Decompose the score
 
-The visibility score has two components:
+The visibility index has two components:
 
-- `avg_citation_quality_score` × √(citation_runs / total_runs) × 0.25
-- `avg_brand_mention_quality_score` × √(mention_runs / total_runs) × 0.75
+- `avgCitationQualityScore` × √(citation appearance rate) × 0.25
+- `avgBrandMentionQualityScore` × √(mention appearance rate) × 0.75
 
-Plot both components alongside the headline score. If they move together, the change is broad-based. If only one moved, the diagnosis narrows:
+Plot both components alongside the headline index, and check `avgPresenceRate` separately — a presence-rate drop with stable quality means the brand appears less often; stable presence with falling quality means the appearances got weaker. If both components move together, the change is broad-based. If only one moved, the diagnosis narrows:
 
 - **Mentions component dropped, citations stable**: AI answers stopped talking about the brand by name. Often follows a category shift, a competitor PR moment, or a brand positioning change.
 - **Citations component dropped, mentions stable**: AI providers stopped citing the brand's pages as sources. Often follows a sitemap / robots / canonical change, a site migration, or content being deindexed.
-- **Both dropped uniformly**: usually a coverage issue — fewer prompt runs completed in the window. Check `total_runs` per bucket; if it dropped, runs were paused or failed, not visibility itself.
+- **Both dropped uniformly**: usually a coverage issue — fewer prompt runs completed in the window. Check `totalRuns` per bucket; if it dropped, runs were paused or failed, not visibility itself.
 
 ## Step 3: Attribute movement to topics
 
 For the period showing the biggest delta:
 
-1. `aivis_list_topics` for the primary brand at the start of the window and at the end (use two `aivis_get_visibility_scores` calls scoped per topic if needed — or just compare topic-level visibility from the most recent run set).
-2. Compute per-topic delta. Sort.
+1. Call `aivis_get_visibility_scores` once with `groupByTopic: true` and a `comparisonTimeframe` covering the prior period — it returns per-topic trends each with a `previousPeriod`, so one call replaces per-topic fan-out.
+2. Compute per-topic delta from `previousPeriod`. Sort.
 3. Surface:
    - **Top 3 topics that gained score**.
    - **Top 3 topics that lost score**.
@@ -63,9 +65,10 @@ If concentrated (one topic explains > 50 % of the move), recommend the user dril
 If Step 1 flagged a step change (≥ 5 point move in a single bucket):
 
 1. Note the bucket boundary date.
-2. `aivis_list_prompt_runs` filtered to that bucket. Compare the run mix to the surrounding buckets — did a provider start or stop? Did the run volume jump?
+2. `aivis_list_prompt_provider_visibility` (`projectId` + primary `brandId`) twice — once with `timeframe` set to the step bucket, once to the equivalent prior window. Compare the provider mix and `totalRuns` per provider — did a provider start or stop? Did run volume jump? (`aivis_list_prompt_runs` can't do this at project scope — it requires a specific `promptId` + `brandId`.)
 3. Check whether the project added or removed topics/prompts around that date. (`aivis_list_topics` and `aivis_list_prompts` don't return creation dates directly, but the user usually knows.)
-4. If none of those explain it, the answer is in the prompt-run details — pick one prompt that scored very differently in the step bucket vs neighbouring buckets and recommend `/lumar-analytics:prompt-investigation` on it.
+4. For GEO-app projects, `aivis_list_discovered_pages` with `timeframe` = the step bucket and `comparisonTimeframe` = the prior window shows which pages entered or left AI answers (`previousPeriod` deltas per URL) — a competitor page suddenly ranking often explains a mention-side drop.
+5. If none of those explain it, the answer is in the prompt-run details — pick one prompt that scored very differently in the step bucket vs neighbouring buckets (drill in with `aivis_list_prompt_runs` on that `promptId` + `brandId`) and recommend `/lumar-analytics:prompt-investigation` on it.
 
 ## Step 5: Deliverable
 
@@ -82,4 +85,5 @@ Markdown report:
 
 - **Short window noise**: `last_7d` trends are usually noise unless run volume is very high. Default to `last_90d` with weekly granularity for trend questions; only zoom to daily when investigating a confirmed step change.
 - **Comparing visibility scores across brands**: the score is brand-relative. The same topic can produce a 60 for one brand and 20 for another simply because they're being measured differently — never present cross-brand deltas without `aivis_get_top_brands` context.
-- **Confusing run-volume changes with visibility changes**: if `total_runs` per bucket varies, the `√(runs/total_runs)` dampener can swing scores even when raw quality scores are flat. Always plot run volume alongside the score.
+- **Confusing run-volume changes with visibility changes**: if run volume per bucket varies, the √(appearance-rate) dampener in the visibility index can swing scores even when raw quality scores are flat. Always plot run volume (and `avgPresenceRate`) alongside the index.
+- **Deprecated score field**: `avgVisibilityScore` is an alias of `avgVisibilityIndex` — treat them as one metric, never chart both.
