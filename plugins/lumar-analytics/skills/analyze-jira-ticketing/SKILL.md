@@ -21,7 +21,7 @@ Bridge Lumar Analyze tasks to Jira. This skill uses the first-party Analyze task
 1. If the task ID is known, call `analyze_get_task`.
 2. Otherwise call `analyze_list_tasks` with `query` or the current project/account scope and ask if multiple tasks match.
 
-When the user asks for ticket copy, call `analyze_generate_task_ticket_details` with the task ID and optional `crawlId`. It is async; poll `analyze_get_task` for `ticketGenerationFinishedAt` and `ticketDetails` only when the user wants to wait.
+When the user asks for ticket copy, call `analyze_generate_task_ticket_details` with the task ID and optional `crawlId` (report context for the generation). It requires AI features enabled on the account. It is async; poll `analyze_get_task` for `ticketGenerationFinishedAt` and `ticketDetails` only when the user wants to wait.
 
 ## Step 1: Resolve Jira authentication
 
@@ -39,7 +39,7 @@ Call `analyze_list_jira_authentications`. If several working connections exist, 
 1. Call `analyze_list_jira_projects`.
 2. Call `analyze_list_jira_issue_types` for the chosen Jira project.
 3. Call `analyze_get_jira_create_field_metadata` when required custom fields, priority, components, labels, or non-default description fields are involved.
-4. Call `analyze_create_task_external_link` with `jiraProjectId`, `jiraIssueTypeId`, optional `jiraIssueSummary`, optional `additionalFields`, and `useAiTicketDetails: true` only when generated details exist or the user asked to use them.
+4. Call `analyze_create_task_external_link` with `taskId`, `jiraAuthenticationId`, `jiraProjectId`, `jiraIssueTypeId`, optional `jiraIssueSummary`, optional `additionalFields`, and `useAiTicketDetails: true` only when generated details exist or the user asked to use them.
 
 Confirm before creating a new Jira issue or deleting an external link.
 
@@ -59,6 +59,6 @@ Include:
 ## Common pitfalls
 
 - **External scope** — Jira tools require the `analyze:external` toolset. If unavailable, explain that Jira access was not granted.
-- **Two create modes** — pass either `jiraIssueIdOrKey` for existing issues, or both `jiraProjectId` and `jiraIssueTypeId` for new issues. Do not mix them.
+- **Two create modes** — pass either `jiraIssueIdOrKey` for existing issues (with no create fields), or both `jiraProjectId` and `jiraIssueTypeId` for new issues (`jiraIssueSummary` alone is not enough). Mixing modes is rejected up front.
 - **Required fields** — use `analyze_get_jira_create_field_metadata` before guessing Jira custom field IDs.
 - **AI ticket details are async** — generate and poll before passing `useAiTicketDetails: true`.

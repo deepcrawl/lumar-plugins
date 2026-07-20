@@ -19,19 +19,21 @@ This skill uses **Lumar MCP tools** exclusively. All tool references below (`lum
 
 ## Step 0: Resolve account, project, and brand set
 
-1. `lumar_get_me` → pick AI-Visibility-entitled account (ask if multiple).
+1. `lumar_get_me` → pick AI-Visibility-entitled account (ask if multiple; system admins get no account list — resolve by name with `lumar_search_accounts`).
 2. `aivis_list_projects` → pick project. Note its primary brand.
-3. `aivis_list_brands` for the project to get the full tracked-brand list.
-4. If the user named specific competitors, filter to those (warn on any name that didn't match a tracked brand — suggest they add it on the project before re-running).
-5. If no list given, use the top 5 tracked competitors by visibility score from `aivis_get_top_brands`.
+3. `aivis_list_brands` for the project with `types: ["Competitor"]` to get the tracked competitor list directly (types are `Own` / `Competitor` / `Other`; omit the filter to see everything, including auto-discovered `Other` brands not yet classified).
+4. If the user named specific competitors, filter to those (use `query` for a name match; warn on any name that didn't match a tracked brand — suggest classifying it as `Competitor` via `aivis_update_brand`, or adding it on the project, before re-running).
+5. If no list given, use the top 5 tracked competitors by visibility index from `aivis_get_top_brands`.
 
 ## Step 1: Leaderboard
 
-`aivis_get_top_brands` for the project over `timeframe`. Build a single table:
+`aivis_get_top_brands` (`projectId` + primary `brandId` as the focus brand) over `timeframe`. Brands are ranked by `avgVisibilityIndex`; each also carries `avgPresenceRate` and `avgQualityScore`. Build a single table:
 
-| Rank | Brand | Visibility | Citations component | Mentions component | Δ vs prior period |
+| Rank | Brand | Visibility index | Presence rate | Quality score | Δ vs prior period |
 
-Mark the primary brand row (⭐). If the primary brand isn't in the top N, extend the list until it appears.
+For the Δ column, the tool has no comparison parameter — call it a second time with the equivalent prior window and diff the two result sets.
+
+Mark the primary brand row (⭐). The tool returns ~8 brands and always includes the focus brand, so the primary is guaranteed to appear.
 
 ## Step 2: Per-topic head-to-head
 
@@ -41,10 +43,10 @@ For each topic returned by `aivis_list_topics` (primary brand), pull the same me
 2. Build a matrix:
    - Rows: topics (project-wide)
    - Columns: primary brand + each competitor
-   - Cells: visibility score
+   - Cells: visibility index (`avgVisibilityIndex`)
 
 3. Surface:
-   - **Topics where the primary wins** (highest score in row) — at least 3 examples.
+   - **Topics where the primary wins** (highest index in row) — at least 3 examples.
    - **Topics where a competitor wins by ≥ 10 points** — at least 3 examples. These are the priority gaps.
    - **Topics where no brand is doing well** (all < 20) — "open territory" the primary can claim with more prompts/content.
 
@@ -65,7 +67,7 @@ Two common patterns to call out:
 If the user asked for a "deep" or "detailed" benchmark — or if Step 2 surfaced a topic gap they want to drill into — pick the 1–2 most lopsided topics and:
 
 1. `aivis_list_prompts` filtered by that topic.
-2. For the worst-performing prompt for the primary brand on that topic, call `aivis_get_prompt_run_details` on a recent run to surface the actual AI answer, which brands were cited/mentioned, and which sources beat the primary brand.
+2. For the worst-performing prompt for the primary brand on that topic, call `aivis_get_prompt_run_details` on a recent run (pass `verbose: true` for the full answer text — the default is a 500-char preview) to surface the actual AI answer, which brands were cited/mentioned, and which sources beat the primary brand.
 
 Don't do this for every topic — keep it to 1–2 illustrative drill-downs so the report stays scannable.
 
@@ -82,5 +84,5 @@ Write the benchmark as a markdown report with:
 ## Common pitfalls
 
 - **Comparing brands across projects**: AI Visibility brands belong to a project. If a competitor is tracked under a different project, you can't compare them directly — point that out instead of returning a misleading table.
-- **Tiny sample sizes**: in short windows, a competitor with 1 winning run on a topic can look like a "leader" when it's noise. Filter topic-level comparisons to those with `total_runs >= 5` for stability.
+- **Tiny sample sizes**: in short windows, a competitor with 1 winning run on a topic can look like a "leader" when it's noise. Filter topic-level comparisons to those with `totalRuns >= 5` for stability.
 - **Domain attribution**: a brand only gets credit for citations to domains attached to it. If the user is surprised a competitor's citations are low, check whether their domains are fully attached via `aivis_list_brand_domains`.

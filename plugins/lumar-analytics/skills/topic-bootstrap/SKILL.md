@@ -17,7 +17,7 @@ Onboard a brand to Lumar AI Visibility in one pass: create the project, propose 
 
 ## Step 0: Resolve account
 
-1. `lumar_get_me` → confirm the user has an AI-Visibility-entitled account.
+1. `lumar_get_me` → confirm the user has an AI-Visibility-entitled account. (System admins get no account list — resolve the target account by name with `lumar_search_accounts`.)
 2. If multiple accounts, ask which to use.
 
 ## Step 1: Confirm project doesn't already exist
@@ -30,7 +30,7 @@ Onboard a brand to Lumar AI Visibility in one pass: create the project, propose 
 ## Step 2: Create the project
 
 1. Validate `brand_domain` is a bare hostname. Strip any `https://`, trailing slash, or path the user accidentally included.
-2. `aivis_create_project` with the primary brand name and the cleaned hostname.
+2. `aivis_create_project` with a project `name` and `primaryBrand: { name, domain, includeSubdomains? }` (the cleaned hostname). Optionally set `scheduleCadence` (`daily` | `weekly` | `every_two_weeks` | `monthly`). Prompts run automatically after creation.
 3. Capture the returned project ID and primary brand ID — every subsequent call needs them.
 
 ## Step 3: Propose a topic set
@@ -72,14 +72,15 @@ There is **no MCP mutation to create a new competitor brand** — competitor bra
 If the user supplied competitor names + domains:
 
 1. Tell them up front: new competitor brands cannot be created from here. They will either appear automatically after the first run cycle (if AI providers mention them) or need to be created in the Lumar dashboard.
-2. Once a competitor brand exists on the project, list it via `aivis_list_brands` (use `query` to filter by name) to capture its `brandId`.
-3. For each existing competitor brand, attach its domain(s) with `aivis_create_brand_domain` (`brandId` + bare hostname) so its citations attribute correctly. Set `includeSubdomains: true` when appropriate.
+2. Once a competitor brand exists on the project, list it via `aivis_list_brands` (use `query` to filter by name, or `types: ["Other"]` to review unclassified auto-discovered brands) to capture its `brandId`.
+3. Auto-discovered brands default to type `Other` — reclassify genuine competitors with `aivis_update_brand` (`type: "Competitor"`) so analytics treat them as benchmarks.
+4. For each existing competitor brand, attach its domain(s) with `aivis_create_brand_domain` (`brandId` + bare hostname) so its citations attribute correctly. Set `includeSubdomains: true` when appropriate.
 
 ## Step 6: Set expectations
 
 Before signing off, tell the user:
 
-- First prompt runs typically complete within a few hours. They can poll `aivis_list_prompt_runs` or come back tomorrow.
+- First prompt runs typically complete within a few hours. They can poll `aivis_list_prompt_runs` (per `promptId` + `brandId` — there's no project-wide run list) or come back tomorrow.
 - A useful visibility score needs at least a few days of runs across multiple providers — don't pull `aivis_get_visibility_scores` on day one and expect signal.
 - They can re-run this skill to add more topics later, or ask for an AI Visibility audit (the `ai-visibility-audit` skill) once data is in.
 
@@ -87,4 +88,4 @@ Before signing off, tell the user:
 
 - **Hostname validation**: `aivis_create_project` and `aivis_create_brand_domain` reject protocols, paths, and trailing slashes on `domain`. Always pre-strip.
 - **Atomicity boundary**: `aivis_bulk_create_topics` is atomic per call. If a single topic in the batch fails (e.g. duplicate name), the whole batch rolls back — fix the bad entry rather than retrying the rest piecemeal.
-- **Archival not exposed**: there's no MCP tool to archive a project. If the user creates a project they meant to merge into another, they must archive it via the Lumar dashboard.
+- **Cleaning up a mistaken project**: `aivis_delete_project` soft-deletes a project (topics, prompts, runs, and brands stop being returned by reads). It's destructive — always confirm with the user before calling.

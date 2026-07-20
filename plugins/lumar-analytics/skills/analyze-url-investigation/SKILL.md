@@ -15,21 +15,21 @@ Pull a Resource-Detail-style view of one URL: status, canonical, content metrics
 
 ## Step 0: Resolve account, project, and crawl
 
-1. `lumar_get_me` → Analyze-entitled account.
+1. `lumar_get_me` → Analyze-entitled account (system admins get no account list — resolve by name with `lumar_search_accounts`).
 2. `analyze_list_projects` (`query`) → project.
 3. `analyze_list_crawls` (`projectId`, `status: "finished"`, `limit: 5`) → latest finished crawl unless named.
 
-## Step 1: Resolve `urlId`
+## Step 1: Identify the page
 
-`analyze_get_url_detail` needs a `urlId` — that's the `urlDigest` metric from a report row, **not** the rendered URL string.
+`analyze_get_url_detail` accepts **either** `url` (the rendered absolute URL — resolved to its `urlDigest` server-side) **or** `urlId` (the `urlDigest` metric from a report row). Pass exactly one.
 
-- If the user supplied a digest, use it directly.
-- Otherwise call `analyze_list_report_rows` (`crawlId`, `reportTemplateCode: "all_pages"`, `filterRules: [{ metricCode: "url", predicate: "eq", value: <user URL> }]`, `limit: 1`) and read `urlDigest` from the matching row.
-- If no row matches, the URL wasn't in the crawl — tell the user (could be excluded by config, robots, or scope).
+- If the user gave a URL, pass it as `url` directly. Matching is exact — protocol, trailing slash, query string, and casing must match the crawled URL.
+- If you already have a digest (e.g. chaining from `analyze_list_report_rows`), pass it as `urlId` — no lookup roundtrip needed.
+- On a `validation/url_not_found` error, the exact string wasn't in the crawl: find the crawled variant via `analyze_list_report_rows` (`reportTemplateCode: "all_pages"`, `filterRules: [{ metricCode: "url", predicate: "contains", value: <path> }]`) and retry, or tell the user the URL wasn't crawled (could be excluded by config, robots, or scope).
 
 ## Step 2: Pull the detail
 
-`analyze_get_url_detail` (`crawlId`, `urlId`, optional `datasources`, `limit: 20`). By default it returns the core datasource set (crawl URL row + accessibility + GSC queries with landing pages + site-speed audits + structured-data blocks/issues). Drop datasources only when the user is clearly only interested in one tab.
+`analyze_get_url_detail` (`crawlId`, `url` or `urlId`, optional `datasources`, `limit: 20`). By default it returns the core datasource set (crawl URL row + accessibility + GSC queries with landing pages + site-speed audits + structured-data blocks/issues). Drop datasources only when the user is clearly only interested in one tab.
 
 ## Step 3: Synthesise tab by tab
 
@@ -37,7 +37,7 @@ Render a per-section summary. Skip a section entirely if it returned zero rows �
 
 - **Crawl metrics** — status code, canonical, title, content length, hreflang, indexability flags. Call out anything that would have flagged a report (e.g. `noindex: true`, `statusCode: 404`, missing canonical).
 - **Accessibility issues** — group by WCAG impact (Critical → Minor). Show the top 5 with rule + element selector.
-- **Site-speed audits** — show the worst-scoring audits (lowest `score`) and any opportunities with high `savingsMs`.
+- **Site-speed audits** — show the worst-scoring audits (lowest `score`). Opportunities (`savingsMs`) live in `CrawlSiteSpeedAuditOpportunities`, which is **not** in the default datasource set — add it to `datasources` explicitly when the user cares about speed fixes.
 - **Search queries (GSC)** — top 5 queries by clicks; flag queries with high impressions but low CTR.
 - **Structured-data** — list block types and issues by severity.
 
@@ -57,6 +57,6 @@ Markdown:
 
 ## Common pitfalls
 
-- **`urlId` is the digest, not the URL** — passing the rendered URL string to `analyze_get_url_detail` will error or return nothing. Always resolve via a report row first.
+- **`url` matching is exact** — a typo, missing trailing slash, or protocol mismatch yields `validation/url_not_found`, not a fuzzy match. Pass exactly one of `url` / `urlId`; supplying both (or neither) is a validation error.
 - **Datasource availability varies by module** — a project on the `Basic` / `SEO` module won't have accessibility audit data; `CrawlAccessibilityIssues` will return empty. Don't treat empty as broken.
 - **`CrawlSearchQueries` vs `CrawlSearchQueriesWithLandingPages`** — the WithLandingPages variant is what Core UI's ResourceDetail uses. Default to it.

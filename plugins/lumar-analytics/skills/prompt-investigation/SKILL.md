@@ -19,13 +19,13 @@ This skill uses **Lumar MCP tools** exclusively. All tool references below (`lum
 
 ## Step 0: Resolve account, project, and prompt
 
-1. `lumar_get_me` → pick AI-Visibility-entitled account.
-2. If the user named a prompt by text, call `aivis_list_prompts` to find it. If multiple prompts match, present a disambiguation list and ask. Never silently pick.
-3. Note the prompt's project ID and the project's primary brand.
+1. `lumar_get_me` → pick AI-Visibility-entitled account. (System admins get no account list — resolve by name with `lumar_search_accounts`.)
+2. `aivis_list_projects` → pick the project and note its primary brand. (`aivis_list_prompts` needs both `projectId` and `brandId`, so resolve these first.)
+3. If the user named a prompt by text, call `aivis_list_prompts` with `query` set to that text. If multiple prompts match, present a disambiguation list and ask. Never silently pick.
 
 ## Step 1: Pull the run set
 
-`aivis_list_prompt_runs` filtered by `promptId` over `timeframe`. Optionally filter by `provider`.
+`aivis_list_prompt_runs` with `promptId` + the primary `brandId` over `timeframe`. There is no provider parameter — each run row carries its provider, so filter client-side if the user asked for one provider. For a per-provider metric rollup of this prompt without walking runs, `aivis_list_prompt_provider_visibility` (`projectId` + `brandId` + `query` on the prompt text) returns one row per provider with presence rate, quality score, and visibility index.
 
 Build a one-line summary per run:
 
@@ -35,14 +35,16 @@ Sort by date desc. If there are more than 10 runs, summarise the rest and focus 
 
 ## Step 2: Inspect individual runs
 
-For each focused run, call `aivis_get_prompt_run_details`. Surface:
+For each focused run, call `aivis_get_prompt_run_details` (`promptRunId` + `brandId`). The default response is a summary — the first 500 chars of `fullAnswerText` and the first 10 items of each nested array; pass `verbose: true` when you need the full answer text and complete arrays. Surface:
 
-- **AI answer** (the full text). Render in a quoted block.
+- **AI answer** (`fullAnswerText`). Render in a quoted block; use `verbose: true` if the preview is truncated.
 - **Search queries** the provider issued (if available — Perplexity, Google AI Overviews, and recent ChatGPT runs expose these via the `searchQueries` field).
-- **Citations** — list of URLs the answer cited, with their attributed brand if any.
-- **Mentions** — brand names mentioned inline, with quality score.
-- **Other brand citations** — citations to brands tracked on the project that aren't the primary brand. This is the competitive view: who is the AI recommending instead?
+- **Citations** (`brandCitations`) — list of URLs the answer cited, with their attributed brand if any.
+- **Mentions** (`brandMentions`) — brand names mentioned inline, with quality score.
+- **Other brand citations** (`otherBrandCitations`) — citations to brands tracked on the project that aren't the primary brand. This is the competitive view: who is the AI recommending instead?
 - **Component scores** — citation quality and brand-mention quality the run contributed.
+
+For GEO-app projects, `aivis_list_discovered_urls` with `promptRunId` shows every URL the AI engine's answer or grounding results surfaced for that run (with SERP `position` and `pageRunStatus`) — a wider net than the citation list.
 
 ## Step 3: Diagnose the pattern
 
@@ -51,7 +53,7 @@ Look across the runs and answer these questions explicitly:
 1. **Is the primary brand appearing at all?** If 0 mentions and 0 citations across all runs, the prompt is a complete miss — likely the brand has no content matching the intent, or its content isn't being indexed/cited by AI providers.
 2. **Where in the answer does the brand appear?** A brand mentioned in the first paragraph beats one in a "see also" tail. Quote position.
 3. **Who is winning?** If the same competitor keeps appearing first, that's the brand the user needs to displace. Name them.
-4. **Are providers using different search queries?** When provider answers diverge, search-grounded providers (Perplexity, Google AI Overviews) often reveal _why_ — they show the queries they ran and the sources they pulled. LLM-only providers (older ChatGPT, older Claude) reflect training-data baked-in associations.
+4. **Are providers using different search queries?** When provider answers diverge, search-grounded providers (Perplexity, Google AI Overviews) often reveal _why_ — they show the queries they ran and the sources they pulled. LLM-only providers (older ChatGPT, older Claude) reflect training-data baked-in associations. For the cross-run view, `aivis_list_search_queries` with `promptId` aggregates every query providers issued for this prompt (`totalSearchQueries`, `avgPosition`, provider mix); pass `comparisonTimeframe` to spot emerging vs declining queries.
 5. **Are cited sources owned by the brand or third-party?** Citations to the brand's own domain are usually under their control. Citations to third-party reviews / listicles / Reddit aren't — but tell you which third-party content to influence.
 
 ## Step 4: Recommendations

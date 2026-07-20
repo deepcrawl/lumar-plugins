@@ -129,9 +129,17 @@ The `lumar-analytics` plugin auto-configures one MCP server:
 | :------ | :------------------------- | :-------------------------------------------------------------- |
 | `lumar` | `https://mcp.lumar.io/mcp` | Unified Lumar MCP — exposes opt-in toolsets per product surface and trust boundary |
 
+### Authentication
+
+The server authenticates via OAuth: on first connect the host opens a browser login against your Lumar account, followed by a consent screen where you pick toolsets. Clients don't need to be on an allow list — the gateway supports standard Dynamic Client Registration, and clients that publish a Client ID Metadata Document (an https URL hosting their registration) can authenticate with that instead; the consent screen names the requesting application either way.
+
+Access requires the **MCP Server subscription addon** on at least one of your active Lumar accounts (Lumar system admins keep access regardless). Without it, sign-in is refused, and removing the addon locks out existing sessions within a few minutes.
+
+For shared-credential surfaces that cannot run an interactive login (e.g. Claude Tag / Claude in Slack), the server also accepts a static Lumar user key as a bearer credential (`Authorization: Bearer <userKeyId>:<secret>`). User-key connections are read-only — only the read toolsets (`context`, `ai-visibility:read`, `analyze:read`) are available, enforced server-side — and the MCP Server addon is still required. Revoking the user key cuts off access within a minute.
+
 ### Toolset consent and scoping
 
-The server groups tools by product surface and trust boundary. For remote HTTP clients, the OAuth consent screen is the source of truth: the user grants leaf scopes such as `toolset:ai-visibility:read` or `toolset:analyze:external`, and the server registers only those toolsets for that token. The `context` toolset is always on so agents can call `lumar_get_me` and discover accounts.
+The server groups tools by product surface and trust boundary. For remote HTTP clients, the OAuth consent screen is the source of truth: the user grants leaf scopes such as `toolset:ai-visibility:read` or `toolset:analyze:external`, and the server registers only those toolsets for that token. The `context` toolset is always on so agents can call `lumar_get_me` / `lumar_search_accounts` and discover accounts.
 
 For scoped local or custom connector configs, use the URL path or `X-MCP-Toolsets` header. Leaf selectors are explicit:
 
@@ -145,7 +153,7 @@ Bare product selectors are shortcuts: `ai-visibility` expands to `ai-visibility:
 
 | Toolset               | What it grants                                                                                                                                                                                                                                                      |
 | :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `context`             | `lumar_get_me` — always on; returns authenticated user and accessible accounts with per-product entitlements                                                                                                                 |
+| `context`             | `lumar_get_me` + `lumar_search_accounts` — always on; identifies the authenticated user, lists their accessible accounts with per-product entitlements, and resolves accounts by name. Lumar system admins get no account list from `lumar_get_me` (they can access every account) — `lumar_search_accounts` is how they find one. |
 | `ai-visibility:read`  | Read AI Visibility projects, topics, prompts, brands, visibility/citation/mention metrics, discovered URLs, content-evaluation scores, GSC bindings, provider catalog, suggestions.                                                                                 |
 | `ai-visibility:write` | Create / update / delete AI Visibility projects, topics, prompts, brand-domains; classify and merge brands; attach / update / detach GSC properties; enable / disable / sync project AI providers; trigger prompt + page runs; generate suggested topics / prompts. |
 | `analyze:read`        | Read Analyze crawl projects, crawls, segments, reports, report rows, URL detail, health / report trends, tasks, single-page requests, custom-metric generations, report export status.                                                                              |
@@ -157,21 +165,21 @@ More surfaces (Content Relevance) will be added as opt-in toolsets without chang
 
 ### Tools by toolset
 
-**`context`** — `lumar_get_me`.
+**`context`** — `lumar_get_me`, `lumar_search_accounts`.
 
-**`ai-visibility:read`** — `aivis_list_projects`, `aivis_get_account_settings`, `aivis_list_topics`, `aivis_search_topics`, `aivis_list_prompts`, `aivis_list_brands`, `aivis_list_brand_domains`, `aivis_get_top_brands`, `aivis_get_brand_signals`, `aivis_get_visibility_scores`, `aivis_list_search_queries`, `aivis_get_page_scores`, `aivis_list_page_runs`, `aivis_list_discovered_urls`, `aivis_list_serp_discovery_runs`, `aivis_list_prompt_runs`, `aivis_get_prompt_run_details`, `aivis_list_prompt_provider_visibility`, `aivis_list_ai_providers`, `aivis_list_project_ai_providers`, `aivis_list_active_providers`, `aivis_list_active_countries`, `aivis_list_google_connections`, `aivis_list_gsc_properties`, `aivis_get_suggested_topics`, `aivis_get_suggested_prompts`.
+**`ai-visibility:read`** — `aivis_list_projects`, `aivis_search_topics`, `aivis_list_topics`, `aivis_list_prompts`, `aivis_list_brands`, `aivis_get_top_brands`, `aivis_list_brand_domains`, `aivis_get_brand_signals`, `aivis_get_visibility_scores`, `aivis_list_prompt_runs`, `aivis_get_prompt_run_details`, `aivis_list_discovered_urls`, `aivis_list_discovered_pages`, `aivis_get_suggested_topics`, `aivis_get_suggested_prompts`, `aivis_list_active_providers`, `aivis_list_active_countries`, `aivis_get_page_scores`, `aivis_list_page_runs`, `aivis_list_serp_discovery_runs`, `aivis_list_prompt_provider_visibility`, `aivis_list_search_queries`, `aivis_list_google_connections`, `aivis_list_gsc_properties`, `aivis_get_account_settings`, `aivis_list_ai_providers`, `aivis_list_project_ai_providers`.
 
-**`ai-visibility:write`** — `aivis_create_project`, `aivis_update_project`, `aivis_delete_project`, `aivis_bulk_create_topics`, `aivis_update_topic`, `aivis_delete_topic`, `aivis_create_prompt`, `aivis_delete_prompt`, `aivis_update_brand`, `aivis_merge_brands`, `aivis_promote_brand`, `aivis_unmerge_brand`, `aivis_create_brand_domain`, `aivis_update_brand_domain`, `aivis_delete_brand_domain`, `aivis_attach_gsc_property`, `aivis_update_gsc_property`, `aivis_detach_gsc_property`, `aivis_enable_project_ai_provider`, `aivis_disable_project_ai_provider`, `aivis_sync_project_ai_providers`, `aivis_generate_suggested_topics`, `aivis_generate_suggested_prompts`, `aivis_trigger_page_run`, `aivis_run_project_prompts`.
+**`ai-visibility:write`** — `aivis_create_project`, `aivis_update_project`, `aivis_delete_project`, `aivis_run_project_prompts`, `aivis_bulk_create_topics`, `aivis_update_topic`, `aivis_generate_topic_metadata`, `aivis_delete_topic`, `aivis_create_prompt`, `aivis_delete_prompt`, `aivis_create_brand_domain`, `aivis_update_brand_domain`, `aivis_delete_brand_domain`, `aivis_update_brand`, `aivis_merge_brands`, `aivis_promote_brand`, `aivis_unmerge_brand`, `aivis_generate_suggested_topics`, `aivis_generate_suggested_prompts`, `aivis_trigger_page_run`, `aivis_attach_gsc_property`, `aivis_update_gsc_property`, `aivis_detach_gsc_property`, `aivis_enable_project_ai_provider`, `aivis_disable_project_ai_provider`, `aivis_sync_project_ai_providers`.
 
-**`analyze:read`** — `analyze_list_projects`, `analyze_list_crawls`, `analyze_get_crawl_summary`, `analyze_list_segments`, `analyze_list_reports`, `analyze_get_report_metadata`, `analyze_list_report_rows`, `analyze_get_url_detail`, `analyze_get_health_trend`, `analyze_get_report_trend`, `analyze_list_tasks`, `analyze_get_task`, `analyze_get_report_export`, `analyze_list_single_page_requests`, `analyze_get_single_page_request`, `analyze_list_custom_metric_generations`, `analyze_get_custom_metric_generation`.
+**`analyze:read`** — `analyze_list_projects`, `analyze_list_crawls`, `analyze_get_crawl_summary`, `analyze_list_segments`, `analyze_list_reports`, `analyze_get_report_metadata`, `analyze_list_report_rows`, `analyze_get_url_detail`, `analyze_list_url_patterns`, `analyze_get_aggregation_catalog`, `analyze_explore_urls_aggregates`, `analyze_get_health_trend`, `analyze_get_report_trend`, `analyze_list_tasks`, `analyze_get_task`, `analyze_get_report_export`, `analyze_list_single_page_requests`, `analyze_get_single_page_request`, `analyze_get_single_page_request_html`, `analyze_list_custom_metric_generations`, `analyze_get_custom_metric_generation`.
 
-**`analyze:write`** — `analyze_create_segment`, `analyze_update_segment`, `analyze_delete_segment`, `analyze_create_report_task`, `analyze_update_task`, `analyze_delete_task`, `analyze_export_report`, `analyze_run_crawl`, `analyze_create_single_page_request`, `analyze_generate_task_ticket_details`, `analyze_create_custom_metric_generation`, `analyze_update_custom_metric_generation`, `analyze_delete_custom_metric_generation`, `analyze_request_custom_metric_generation`, `analyze_run_custom_metric_generation_tests`, `analyze_link_custom_metric_container_to_project`, `analyze_update_custom_metric_container_project`, `analyze_unlink_custom_metric_container_from_project`.
+**`analyze:write`** — `analyze_create_segment`, `analyze_update_segment`, `analyze_delete_segment`, `analyze_create_report_task`, `analyze_update_task`, `analyze_delete_task`, `analyze_generate_task_ticket_details`, `analyze_export_report`, `analyze_run_crawl`, `analyze_create_single_page_request`, `analyze_create_custom_metric_generation`, `analyze_update_custom_metric_generation`, `analyze_delete_custom_metric_generation`, `analyze_request_custom_metric_generation`, `analyze_run_custom_metric_generation_tests`, `analyze_link_custom_metric_container_to_project`, `analyze_update_custom_metric_container_project`, `analyze_unlink_custom_metric_container_from_project`.
 
 **`analyze:external`** — `analyze_list_jira_authentications`, `analyze_list_jira_projects`, `analyze_list_jira_issue_types`, `analyze_get_jira_create_field_metadata`, `analyze_search_jira_issues`, `analyze_create_task_external_link`, `analyze_delete_task_external_link`.
 
 **`analyze:admin`** — `analyze_create_project`, `analyze_update_project`, `analyze_clone_project`.
 
-Per-tool descriptions and input schemas come back over the wire on `tools/list`; that is the canonical reference.
+Per-tool descriptions and input schemas come back over the wire on `tools/list`; that is the canonical reference. Every `aivis_*` tool description ends with an "App availability:" tag saying where that capability is surfaced in the UI — the self-serve Lumar GEO app, Lumar Analyze (enterprise), both, or not surfaced in any app yet. All tools work over MCP regardless of the tag; it exists so agents can tell users where to find a feature in the product.
 
 ### Pointing at a different MCP URL (staging / self-hosted / scoped)
 
@@ -268,7 +276,7 @@ Analytics tools accept a `timeframe` parameter — a named window (`last_7d`, `l
 ## Requirements
 
 - Claude Code, Cursor, **or** Codex (with plugin support)
-- A [Lumar](https://www.lumar.io) account with entitlements for the products whose toolsets you want to use (AI Visibility and/or Lumar Analyze)
+- A [Lumar](https://www.lumar.io) account with the **MCP Server subscription addon** enabled, plus entitlements for the products whose toolsets you want to use (AI Visibility and/or Lumar Analyze)
 - Browser available on first connect for OAuth login
 
 ## License

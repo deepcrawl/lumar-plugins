@@ -15,9 +15,9 @@ Produce a structured snapshot of a Lumar Analyze crawl: identity, total URLs, to
 
 ## Step 0: Resolve account, project, and crawl
 
-1. `lumar_get_me` → pick an Analyze-entitled account (ask if multiple).
+1. `lumar_get_me` → pick an Analyze-entitled account (ask if multiple). System admins (`isSystemAdmin: true`) get no account list — resolve the account by name with `lumar_search_accounts` or use a known `accountId`.
 2. `analyze_list_projects` with `query` filtering by the user-supplied name/domain. If multiple match, ask. Never silently pick.
-3. `analyze_list_crawls` (`projectId`, `status: "finished"`, `limit: 5`). Pick the most recent finished crawl unless the user named a specific one. Note the `crawlId` and the project's `coreUiUrl` for the deliverable.
+3. `analyze_list_crawls` (`projectId`, `status: "finished"`, `limit: 5`). Pick the most recent finished crawl unless the user named a specific one. Note the `crawlId` and the project's `coreUIUrl` for the deliverable.
 
 ## Step 1: Headline numbers and category snapshot
 
@@ -25,20 +25,20 @@ Issue Step 1 + Step 2 + Step 3 in **parallel as a single batch** — they're ind
 
 1. `analyze_get_crawl_summary` (`crawlId`) — captures crawl metadata (URL count, status, run time), `reportCategoriesSnapshot` (per-category scores), and `crawlSegments` generation status.
 2. `analyze_list_reports` (`crawlId`, `issuesOnly: true`, `limit: 30`) — top issue reports across the crawl, sorted by total. Pass `segmentId` if scoping.
-3. `analyze_get_health_trend` (`projectId`, `reportCategoryCode`, optional `segmentId`). If the user gave a category, use it. Otherwise pick the worst-scoring category from `reportCategoriesSnapshot` (it's the most useful trend to show). Fall back to a leaf code (e.g. `security`) if `all` returns an empty trend — the project doesn't aggregate at that level.
+3. `analyze_get_health_trend` (`projectId`, `reportCategoryCode`, optional `segmentId`, optional `limit` — default and max 30). Returns the most recent N trend points, newest first. If the user gave a category, use it. Otherwise pick the worst-scoring category from `reportCategoriesSnapshot` (it's the most useful trend to show). Fall back to a leaf code (e.g. `security`) if `all` returns an empty trend — the project doesn't aggregate at that level.
 
 ## Step 2: Synthesise
 
-Sort the Step 1 report list by `basic.total` descending. Bucket into:
+The Step 1 report list arrives sorted by the selected `reportType` count (`basic` by default) descending; every row carries all four counts (`basic`/`added`/`removed`/`missing`). Bucket into:
 
 - **Top 5 issues** — highest non-zero totals.
-- **Category leaders / laggards** — match each report's `reportTemplate.categoryCode` against `reportCategoriesSnapshot` and call out which category contributes the most issues.
+- **Category leaders / laggards** — match each report's `reportTemplate.primaryReportCategoryCode` against `reportCategoriesSnapshot` and call out which category contributes the most issues.
 
-Trend: from `analyze_get_health_trend` output, compute current score vs first point in the window. Annotate direction and any single-bucket move ≥ 5 points.
+Trend: from `analyze_get_health_trend` output (newest point first), compute the newest score vs the oldest point in the returned window. Annotate direction and any single-bucket move ≥ 5 points.
 
 ## Step 3: Segment status (optional)
 
-If `crawlSegments` in Step 1 contains any segment with `generationStatus` other than `Completed`, surface them — segment-scoped reports for those segments will be empty or partial until generation finishes.
+`crawlSegments` nodes carry generation timestamps, not a status enum: `generatedAt` set = generated; `failedAt` set = failed (see `failureReason`); `generatingAt` set without `generatedAt` = still generating; none set = pending. Surface any segment that isn't generated — segment-scoped reports for it will be empty or partial until generation finishes.
 
 ## Step 4: Deliverable
 
@@ -51,10 +51,10 @@ Markdown report:
 5. **Health trend** — text sparkline or value-per-bucket table; flag any step changes.
 6. **Recommended next steps** — 2–3 actions. Where useful, suggest invoking the `analyze-report-deep-dive` skill on a specific report or `analyze-url-investigation` on a problem URL.
 
-Always include the `crawlId` and `coreUiUrl` so the user can re-run or open the dashboard.
+Always include the `crawlId` and `coreUIUrl` so the user can re-run or open the dashboard. When linking to a specific report, use the `coreUIUrl` that `analyze_list_reports` returns on each row verbatim — never assemble report URLs from ids and codes yourself (the URL's report suffix is not just the template code).
 
 ## Common pitfalls
 
 - **`reportCategoryCode: "all"` may return empty** — projects scoped to a single module (e.g. GEO-only) don't aggregate at `all`. Use a leaf code from `reportCategoriesSnapshot` instead.
 - **Issue totals are per `reportType`** — default `Basic`. If the user is investigating a comparison crawl, also pull `Added` / `Removed` / `Missing` for context.
-- **Segment generation is async** — don't draw conclusions from a segment-scoped report whose segment is still `Pending`/`Generating`/`Failed`. Tell the user to retry once generation completes.
+- **Segment generation is async** — don't draw conclusions from a segment-scoped report whose segment has no `generatedAt` yet (still generating, pending, or failed). Tell the user to retry once generation completes.

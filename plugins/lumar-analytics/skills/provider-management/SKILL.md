@@ -5,7 +5,7 @@ description: Manage which AI providers (OpenAI, Anthropic, Gemini, Perplexity, e
 
 # AI Provider Management
 
-Curate which AI providers a project queries on each scheduled run. Catalog discovery (what's in the subscription), per-project link/unlink, and on-demand subscription sync. Built around the constraint that some accounts auto-sync providers with the subscription, which can revert per-project toggles.
+Curate which AI providers a project queries on each scheduled run. Catalog discovery (what's in the subscription), per-project link/unlink, and on-demand subscription sync. Built around the constraint that some accounts auto-sync providers with the subscription, which can revert per-project toggles. Defaults are per account type: self-serve accounts keep auto-sync **on**; enterprise accounts manage their linked set manually (sync **off**).
 
 ## Parameters
 
@@ -17,13 +17,14 @@ Curate which AI providers a project queries on each scheduled run. Catalog disco
 
 Always start here — the result changes how the rest of the skill behaves.
 
-1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple).
-2. `aivis_get_account_settings` (`accountId`). Capture the `aiProvidersSyncWithSubscription` flag — this is the critical context for any per-project enable/disable.
+1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple). For Lumar system admins no account list is returned — resolve the account by name with `lumar_search_accounts` instead.
+2. `aivis_get_account_settings` (`accountId`). Capture the `aiProvidersSyncWithSubscription` flag — this is the critical context for any per-project enable/disable. Self-serve accounts default to `true`; enterprise accounts default to `false` (manual management).
 3. If the user asked to mutate providers (enable/disable) AND `aiProvidersSyncWithSubscription === true`, **tell them up front**:
 
-   > "Your account has `aiProvidersSyncWithSubscription` turned on, which means the project's provider set is auto-synced with the subscription. Per-project enable/disable mutations will be reverted on the next prompt/topic/run mutation. To make manual toggles stick, an admin needs to turn this off in the Lumar dashboard first. Want to proceed anyway (one-time toggle), or stop here?"
+   > "Your account has `aiProvidersSyncWithSubscription` turned on, which means the project's provider set is auto-synced with the subscription. Per-project enable/disable mutations will be reverted on the next prompt/topic/run mutation. To make manual toggles stick, this needs to be turned off in account settings first. Want to proceed anyway (one-time toggle), or stop here?"
 
    Wait for confirmation before mutating.
+4. Even with sync off, providers the account is no longer entitled to are still removed automatically — manual mode only protects toggles within the entitled set.
 
 ## Step 1: Resolve project
 
@@ -65,7 +66,7 @@ For when the subscription changed and the user wants the project to pick up newl
 
 1. `aivis_sync_project_ai_providers` (`accountId`, `projectId`) → returns `{ success: true }`.
 2. **Always** follow up with `aivis_list_project_ai_providers` to show the new linked set — the mutation itself doesn't return the resulting providers.
-3. This is independent of the `aiProvidersSyncWithSubscription` flag; the sync mutation works regardless of mode.
+3. This is independent of the `aiProvidersSyncWithSubscription` flag; the sync mutation works regardless of mode. It's an MCP/API-only utility — the Lumar apps don't surface it (they rely on the automatic subscription sync).
 
 ## Step 3: Report
 
@@ -84,7 +85,7 @@ For a pure read, just the linked set with each provider's `type`, `name`, and (i
 
 ## Important constraints
 
-- **Subscription is the source of truth** when `aiProvidersSyncWithSubscription=true`. Enable/disable still execute, but the next prompt/topic/run mutation re-runs the sync and may undo them. Don't promise the user a sticky toggle without checking sync mode first.
+- **Subscription is the source of truth** when `aiProvidersSyncWithSubscription=true` (the default for self-serve accounts; enterprise accounts default to manual). Enable/disable still execute, but the next prompt/topic/run mutation re-runs the sync and may undo them. Don't promise the user a sticky toggle without checking sync mode first. Regardless of mode, providers the account loses entitlement to are removed automatically.
 - **`included: false` catalog rows are hard-blocked.** No mutation works around it — the user must upgrade the addon.
 - **No bulk mutation.** Enable/disable take one provider at a time. For "swap providers wholesale", loop the mutation per provider, then verify with `aivis_list_project_ai_providers`.
 - **No "list all providers across all projects"** — `aivis_list_project_ai_providers` is per-project; `aivis_list_ai_providers` is the account-wide catalog.

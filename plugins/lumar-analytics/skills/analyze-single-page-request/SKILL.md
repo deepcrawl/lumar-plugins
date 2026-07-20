@@ -17,7 +17,7 @@ Use Single Page Requester (SPR) for one-off URL crawls. It runs one URL through 
 
 ## Step 0: Resolve project
 
-1. `lumar_get_me` → Analyze-entitled account.
+1. `lumar_get_me` → Analyze-entitled account. System admins get no account list — resolve the account by name with `lumar_search_accounts`.
 2. `analyze_list_projects` with `query` to resolve `projectId`.
 
 If the user only gave a `requestId`, still resolve the project: SPR lookups are project-scoped.
@@ -30,13 +30,17 @@ Call `analyze_create_single_page_request` with:
 
 - `projectId`
 - `url`
-- `skipLinks: true` unless the user needs link graph data
+- `skipLinks: true` (the default) unless the user needs link graph data — `skipLinks: false` only populates link reports on SEO-module projects
 
 Return the `requestId`, initial status, and `expiresAt`.
 
 **Inspect or poll an existing SPR**
 
-Call `analyze_get_single_page_request` with `projectId`, `requestId`, and `verbose` only when needed. If the user does not know the request ID, call `analyze_list_single_page_requests` with `projectId`, optional `url`, and `limit: 10`.
+Call `analyze_get_single_page_request` with `projectId`, `requestId`, and `verbose` only when needed. If the user does not know the request ID, call `analyze_list_single_page_requests` with `projectId`, optional `url` (exact match) or `status` filter, and `limit: 10`. Runs spawned by custom-metric generation jobs are hidden unless `includeAutomated: true`.
+
+**Read the captured HTML**
+
+The `*DownloadUrl` fields on a run are presigned links an MCP client cannot open. To read the page body as text, call `analyze_get_single_page_request_html` with `projectId`, `requestId`, and optional `bodyType`: `rendered` (default — the post-JavaScript DOM) or `static` (the raw pre-JS HTML). The response windows the body by `maxChars` (default 50000, max 80000) from `offset`; when `truncated` is true, call again with `offset: nextOffset` to page through. Very large bodies hit a paging ceiling signalled by `readLimitReached`. The run must be `Finished`; a `rendered` body only exists when the run used the renderer (fall back to `static`).
 
 ## Step 2: Interpret results
 
@@ -63,5 +67,5 @@ Give a compact result:
 
 - **Project-scoped IDs** — a `requestId` from another project will not resolve.
 - **Project settings are inherited** — user agent, renderer, robots, headers, and related crawl profile settings come from the project. Change those in the dashboard before triggering if needed.
-- **Heavy verbose payloads** — request `verbose: true` only when raw outputs or signed artifacts are needed.
-- **Expiry** — SPR results and signed output URLs expire after `expiresAt` (90 days).
+- **Heavy verbose payloads** — request `verbose: true` only when raw outputs or signed artifacts are needed. For page HTML, prefer `analyze_get_single_page_request_html` over signed URLs.
+- **Expiry** — SPR results and signed output URLs expire after `expiresAt` (90 days). Expired bodies need a fresh run via `analyze_create_single_page_request`.
