@@ -18,7 +18,7 @@ Drive the AI-assisted custom metric generation workflow: create a draft, request
 
 ## Step 0: Resolve account and entitlement
 
-1. `lumar_get_me` → pick an Analyze-entitled account. System admins get no account list — resolve the account by name with `lumar_search_accounts`.
+1. `lumar_get_me` → pick an Analyze-entitled account. System admins get no account list — resolve the account by name with `lumar_search_accounts`. Record `me.isServiceAccount`.
 2. Check that the account has AI features enabled before starting generation. If not, explain that custom metric generation needs AI features enabled. Creating a generation also requires Editor role on the account.
 3. Resolve `projectId` with `analyze_list_projects` when test URLs or project linking are involved.
 
@@ -40,12 +40,14 @@ To edit a draft, use `analyze_update_custom_metric_generation`. `testUrls` and `
 
 ## Step 2: Generate and test
 
-1. Call `analyze_request_custom_metric_generation`. Each call consumes AI credits. Status moves `GenerationRequested` → `Generating` → `Generated` (or `Failed`).
+1. In a user session, call `analyze_request_custom_metric_generation`. Each call consumes AI credits. Status moves `GenerationRequested` → `Generating` → `Generated` (or `Failed`).
 2. Tell the user it is async. Poll with `analyze_get_custom_metric_generation` (`status`, `generatedAt`, `failedAt`, `failureReason`) only if they ask or the status is needed immediately.
 3. Run tests with `analyze_run_custom_metric_generation_tests` when the generation is in the `Generated`, `GeneratedWaitingForTests`, `Failed`, or `Tested` state and test URLs exist. Each test consumes one URL against the account quota.
-4. Inspect test SPR runs through `analyze_get_custom_metric_generation` (`tests`) or `analyze_get_single_page_request` by `requestId`.
+4. Inspect test SPR runs through `analyze_get_custom_metric_generation` (`tests`) or `analyze_get_single_page_request` by `requestId`. Use `analyze_get_single_page_request_output` with `name: "publishedDcCrawlerStep"` to read the generated custom metrics inline.
 
 If the user wants generation and tests chained, set `runTestsAfterGeneration: true` on `analyze_request_custom_metric_generation`.
+
+For a service-account session (`me.isServiceAccount: true`), `analyze_request_custom_metric_generation` is not registered because the upstream LLM request is user-bound. The service account can still create/update the draft, run tests on already generated code, and link the finished container. Hand the generation step to an interactive user session or the Lumar dashboard, then resume from testing/linking here.
 
 ## Step 3: Link to projects
 
@@ -75,3 +77,4 @@ Report:
 - **No partial metric patching** — updating `metrics` replaces the full metric list and discards previous LLM output.
 - **Generated code is large** — avoid `verbose: true` unless the user needs the handler source.
 - **Project link uniqueness** — linking the same container to the same project twice fails; update the existing link instead.
+- **Service-account boundary** — draft management, tests, and project links work; the LLM generation request itself requires a user session.

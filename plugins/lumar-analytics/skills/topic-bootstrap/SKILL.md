@@ -60,8 +60,9 @@ Show the proposed topics + sample prompts as a table. **Wait for the user to app
 
 ## Step 4: Bulk-create topics and prompts
 
-1. `aivis_bulk_create_topics` with the approved list — up to 50 topics in one atomic call. Each topic carries its prompts as a nested array; each prompt may set a `country` (ISO 3166-1 alpha-2) for per-region targeting, or omit it for worldwide. Each topic needs ≥ 1 prompt; each prompt ≤ 2500 chars.
-2. If the user approved more than 50 topics (rare), batch into multiple calls — but warn first, since later batches won't roll back if an earlier batch fails.
+1. `lumar_get_account_credits` (`accountId`) → surface the combined `aiVisibility` balance before creating prompts, because their initial provider runs consume AI Visibility credits. A zero balance does not prevent saving the approved topic structure, but do not promise that runs will populate immediately.
+2. `aivis_bulk_create_topics` with the approved list — up to 50 topics in one atomic call. Each topic carries its prompts as a nested array; each prompt may set a `country` (ISO 3166-1 alpha-2) for per-region targeting, or omit it for worldwide. Each topic needs ≥ 1 prompt; each prompt ≤ 2500 chars.
+3. If the user approved more than 50 topics (rare), batch into multiple calls — but warn first, since later batches won't roll back if an earlier batch fails.
 
 Show the resulting topic IDs in a confirmation table so the user can sanity-check.
 

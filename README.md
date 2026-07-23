@@ -6,8 +6,8 @@ The same `skills/` tree is shared across all three hosts — each host reads its
 
 ## Plugins
 
-| Plugin            | Description                                                                           |
-| :---------------- | :------------------------------------------------------------------------------------ |
+| Plugin            | Description                                                                                        |
+| :---------------- | :------------------------------------------------------------------------------------------------- |
 | `lumar-analytics` | Lumar analytics skills for AI Visibility and Lumar Analyze, backed by the unified Lumar MCP server |
 
 ## Quickstart — Claude Code
@@ -98,48 +98,60 @@ Codex reads `.agents/plugins/marketplace.json` at the repo root and the per-plug
 
 ## Skills
 
-| Skill                       | Description                                                                                                                                  |
-| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ai-visibility-audit`       | Snapshot a brand's AI Visibility — headline score, topic coverage, citations vs mentions, provider breakdown                                 |
-| `competitor-benchmark`      | Compare the primary brand against tracked competitors across topics, citation share, and mention quality                                     |
-| `topic-bootstrap`           | Onboard a new brand — create the project, propose a topic + prompt set, bulk-create up to 50 topics atomically                               |
-| `prompt-investigation`      | Drill into a single prompt — full AI answers, search queries, citations, mentions, and competitor positioning                                |
-| `visibility-trend`          | Trace visibility score over time, attribute movement to specific topics, flag step changes                                                   |
-| `analyze-crawl-health`      | Lumar Analyze CrawlOverview-style snapshot — top issue reports, category health trend, segment status                                        |
-| `analyze-report-deep-dive`  | Filter URLs inside one Analyze report by metric predicates; optionally create a tracked remediation task                                     |
-| `analyze-url-investigation` | Resource-Detail-style view of one URL — crawl metrics, accessibility, site speed, GSC, structured data                                       |
-| `analyze-export`            | Async CSV/XML export of a report (or filtered subset) with a polling handoff so the conversation stays responsive                            |
-| `analyze-task-review`       | List and prioritise Analyze remediation tasks; optionally update status, priority, assignees, deadlines, or close tasks                      |
-| `analyze-run-crawl`         | Queue a fresh Analyze crawl outside the schedule, sanity-check for in-flight runs, hand back the new crawl id + dashboard link               |
-| `analyze-segment-management` | Create, update, or delete Analyze segments from structured CrawlUrl filter rules                                                              |
-| `analyze-single-page-request` | Run or inspect Single Page Requester jobs for one URL against a project's current crawl settings                                             |
-| `analyze-custom-metrics`    | Generate, test, and link AI-assisted custom metric containers to Analyze projects                                                             |
-| `analyze-jira-ticketing`    | Generate task ticket details and link Analyze remediation tasks to existing or new Jira issues                                                |
-| `analyze-project-admin`     | Create, update, or clone Analyze projects with the common crawl settings exposed by MCP                                                       |
-| `brand-curation`            | Curate the AI Visibility brand list — merge variants, promote the right primary, classify Own/Competitor/Other, attach domains               |
-| `page-evaluation`           | Deep-dive one URL's content evaluation — aggregated scores, LLM reasoning, per-snippet precision, per-competitor uniqueness, GSC queries     |
-| `gsc-setup`                 | Connect a Google Search Console property to an AI Visibility project so page runs unlock real-search-query relevance scoring                 |
-| `provider-management`       | List the AI provider catalog, manage per-project provider links, sync with subscription — flags the `aiProvidersSyncWithSubscription` caveat |
+| Skill                         | Description                                                                                                                                  |
+| :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai-visibility-audit`         | Snapshot a brand's AI Visibility — headline score, topic coverage, citations vs mentions, provider breakdown                                 |
+| `competitor-benchmark`        | Compare the primary brand against tracked competitors across topics, citation share, and mention quality                                     |
+| `topic-bootstrap`             | Onboard a new brand — create the project, propose a topic + prompt set, bulk-create up to 50 topics atomically                               |
+| `prompt-investigation`        | Drill into a single prompt — full AI answers, search queries, citations, mentions, and competitor positioning                                |
+| `visibility-trend`            | Trace visibility score over time, attribute movement to specific topics, flag step changes                                                   |
+| `analyze-crawl-health`        | Lumar Analyze CrawlOverview-style snapshot — top issue reports, category health trend, segment status                                        |
+| `analyze-report-deep-dive`    | Filter URLs inside one Analyze report by metric predicates; optionally create a tracked remediation task                                     |
+| `analyze-url-investigation`   | Resource-Detail-style view of one URL — crawl metrics, stored HTML, accessibility, site speed, GSC, structured data                          |
+| `analyze-export`              | Async CSV/XML export of a report (or filtered subset) with a polling handoff so the conversation stays responsive                            |
+| `analyze-task-review`         | List and prioritise Analyze remediation tasks; optionally update status, priority, assignees, deadlines, or close tasks                      |
+| `analyze-run-crawl`           | Check remaining credits, queue an Analyze crawl outside the schedule, and hand back the new crawl id + dashboard link                        |
+| `analyze-segment-management`  | Create, update, or delete Analyze segments from structured CrawlUrl filter rules                                                             |
+| `analyze-single-page-request` | Run or inspect Single Page Requester jobs, override common per-run settings, and read HTML or named result documents inline                  |
+| `analyze-custom-metrics`      | Generate, test, and link AI-assisted custom metric containers to Analyze projects                                                            |
+| `analyze-jira-ticketing`      | Generate task ticket details and link Analyze remediation tasks to existing or new Jira issues                                               |
+| `analyze-project-admin`       | Create, update, or clone Analyze projects with the common crawl settings exposed by MCP                                                      |
+| `brand-curation`              | Curate the AI Visibility brand list — merge variants, promote the right primary, classify Own/Competitor/Other, attach domains               |
+| `page-evaluation`             | Deep-dive one URL's content evaluation — aggregated scores, LLM reasoning, per-snippet precision, per-competitor uniqueness, GSC queries     |
+| `gsc-setup`                   | Connect a Google Search Console property to an AI Visibility project so page runs unlock real-search-query relevance scoring                 |
+| `provider-management`         | List the AI provider catalog, manage per-project provider links, sync with subscription — flags the `aiProvidersSyncWithSubscription` caveat |
 
 ## MCP server
 
 The `lumar-analytics` plugin auto-configures one MCP server:
 
-| Server  | URL                        | Purpose                                                         |
-| :------ | :------------------------- | :-------------------------------------------------------------- |
+| Server  | URL                        | Purpose                                                                            |
+| :------ | :------------------------- | :--------------------------------------------------------------------------------- |
 | `lumar` | `https://mcp.lumar.io/mcp` | Unified Lumar MCP — exposes opt-in toolsets per product surface and trust boundary |
 
 ### Authentication
 
-The server authenticates via OAuth: on first connect the host opens a browser login against your Lumar account, followed by a consent screen where you pick toolsets. Clients don't need to be on an allow list — the gateway supports standard Dynamic Client Registration, and clients that publish a Client ID Metadata Document (an https URL hosting their registration) can authenticate with that instead; the consent screen names the requesting application either way.
+Interactive clients authenticate via OAuth: on first connect the host opens a browser login against your Lumar account, followed by a consent screen where you pick toolsets. Clients don't need to be on an allow list — the gateway supports standard Dynamic Client Registration, and clients that publish a Client ID Metadata Document (an https URL hosting their registration) can authenticate with that instead; the consent screen names the requesting application either way.
 
 Access requires the **MCP Server subscription addon** on at least one of your active Lumar accounts (Lumar system admins keep access regardless). Without it, sign-in is refused, and removing the addon locks out existing sessions within a few minutes.
 
 For shared-credential surfaces that cannot run an interactive login (e.g. Claude Tag / Claude in Slack), the server also accepts a static Lumar user key as a bearer credential (`Authorization: Bearer <userKeyId>:<secret>`). User-key connections are read-only — only the read toolsets (`context`, `ai-visibility:read`, `analyze:read`) are available, enforced server-side — and the MCP Server addon is still required. Revoking the user key cuts off access within a minute.
 
+For headless automation (CI, scheduled agents, and server-to-server integrations), use a Lumar **service-account key**:
+
+```
+Authorization: Bearer lmr_sa_<serviceAccountId>_<secret>
+```
+
+The HTTP transport also accepts the key in `x-api-key` when no `Authorization` header is present. Service accounts are created by an account admin in the Lumar app. Each key is scoped to one account and keeps the role selected when it was created; Lumar enforces that role on every query and mutation, so service-account sessions can use write toolsets when their role and selected toolsets allow it. The account still needs the MCP Server addon.
+
+`lumar_get_me` identifies these sessions with `me.isServiceAccount: true` and returns the key's one scoped account, which account-level tools auto-pick when `accountId` is omitted. A few upstream operations require a real user and are therefore hidden from service-account sessions: `analyze_create_report_task`, `analyze_generate_task_ticket_details`, `analyze_create_task_external_link`, `analyze_request_custom_metric_generation`, and `aivis_list_google_connections`. Use an interactive user session or the Lumar dashboard for those steps.
+
+Service-account IP allowlists are checked against the hosted MCP server's egress IP, not the machine running the MCP client. A key restricted to the client's IP will generally be rejected by the hosted server. Never commit a user key or service-account key to this plugin repository.
+
 ### Toolset consent and scoping
 
-The server groups tools by product surface and trust boundary. For remote HTTP clients, the OAuth consent screen is the source of truth: the user grants leaf scopes such as `toolset:ai-visibility:read` or `toolset:analyze:external`, and the server registers only those toolsets for that token. The `context` toolset is always on so agents can call `lumar_get_me` / `lumar_search_accounts` and discover accounts.
+The server groups tools by product surface and trust boundary. For remote HTTP clients using OAuth, the consent screen is the source of truth: the user grants leaf scopes such as `toolset:ai-visibility:read` or `toolset:analyze:external`, and the server registers only those toolsets for that token. The `context` toolset is always on so agents can discover identity, accounts, and credits.
 
 For scoped local or custom connector configs, use the URL path or `X-MCP-Toolsets` header. Leaf selectors are explicit:
 
@@ -149,29 +161,31 @@ https://mcp.lumar.io/mcp/x/ai-visibility:read,analyze:read
 
 Bare product selectors are shortcuts: `ai-visibility` expands to `ai-visibility:read,ai-visibility:write`; `analyze` expands to `analyze:read,analyze:write,analyze:external,analyze:admin`. Unknown toolset names are silently ignored.
 
+If an Analyze session has `analyze:write` but the project create/update/clone tools are missing, the connection was authorized without `analyze:admin`; reconnect and select **Lumar Analyze — Project admin** on the consent screen. The tools still exist — they are deliberately separated behind the higher-trust scope.
+
 ### Available toolsets
 
-| Toolset               | What it grants                                                                                                                                                                                                                                                      |
-| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `context`             | `lumar_get_me` + `lumar_search_accounts` — always on; identifies the authenticated user, lists their accessible accounts with per-product entitlements, and resolves accounts by name. Lumar system admins get no account list from `lumar_get_me` (they can access every account) — `lumar_search_accounts` is how they find one. |
-| `ai-visibility:read`  | Read AI Visibility projects, topics, prompts, brands, visibility/citation/mention metrics, discovered URLs, content-evaluation scores, GSC bindings, provider catalog, suggestions.                                                                                 |
-| `ai-visibility:write` | Create / update / delete AI Visibility projects, topics, prompts, brand-domains; classify and merge brands; attach / update / detach GSC properties; enable / disable / sync project AI providers; trigger prompt + page runs; generate suggested topics / prompts. |
-| `analyze:read`        | Read Analyze crawl projects, crawls, segments, reports, report rows, URL detail, health / report trends, tasks, single-page requests, custom-metric generations, report export status.                                                                              |
-| `analyze:write`       | Create / update / delete Analyze segments and tasks; start exports; run crawls; start single-page requests; manage custom-metric generations and project links.                                                                                                     |
-| `analyze:external`    | Read and write the user's connected Jira tenant — list Jira projects / issue types / field metadata, search issues, create and delete task ↔ Jira links.                                                                                                             |
-| `analyze:admin`       | Create, update, and clone Analyze projects. Higher-trust project-wide crawl settings and new crawl targets live here, separate from per-crawl writes.                                                                                                                 |
+| Toolset               | What it grants                                                                                                                                                                                                                                                                                                                 |
+| :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `context`             | `lumar_get_me` + `lumar_search_accounts` + `lumar_get_account_credits` — always on; identifies the principal, resolves accessible accounts, and reports remaining credits by type. Lumar system admins get no account list from `lumar_get_me` (they can access every account) — `lumar_search_accounts` is how they find one. |
+| `ai-visibility:read`  | Read AI Visibility projects, topics, prompts, brands, visibility/citation/mention metrics, discovered URLs, content-evaluation scores, GSC bindings, provider catalog, suggestions.                                                                                                                                            |
+| `ai-visibility:write` | Create / update / delete AI Visibility projects, topics, prompts, brand-domains; classify and merge brands; attach / update / detach GSC properties; enable / disable / sync project AI providers; trigger prompt + page runs; generate suggested topics / prompts.                                                            |
+| `analyze:read`        | Read Analyze crawl projects, crawls, segments, reports, report rows, URL detail and stored HTML, health / report trends, tasks, single-page requests and outputs, custom-metric generations, report export status.                                                                                                             |
+| `analyze:write`       | Create / update / delete Analyze segments and tasks; start exports; run crawls; start single-page requests; manage custom-metric generations and project links.                                                                                                                                                                |
+| `analyze:external`    | Read and write the user's connected Jira tenant — list Jira projects / issue types / field metadata, search issues, create and delete task ↔ Jira links.                                                                                                                                                                       |
+| `analyze:admin`       | Create, update, and clone Analyze projects. Higher-trust project-wide crawl settings and new crawl targets live here, separate from per-crawl writes.                                                                                                                                                                          |
 
 More surfaces (Content Relevance) will be added as opt-in toolsets without changing the connector URL.
 
 ### Tools by toolset
 
-**`context`** — `lumar_get_me`, `lumar_search_accounts`.
+**`context`** — `lumar_get_me`, `lumar_search_accounts`, `lumar_get_account_credits`.
 
 **`ai-visibility:read`** — `aivis_list_projects`, `aivis_search_topics`, `aivis_list_topics`, `aivis_list_prompts`, `aivis_list_brands`, `aivis_get_top_brands`, `aivis_list_brand_domains`, `aivis_get_brand_signals`, `aivis_get_visibility_scores`, `aivis_list_prompt_runs`, `aivis_get_prompt_run_details`, `aivis_list_discovered_urls`, `aivis_list_discovered_pages`, `aivis_get_suggested_topics`, `aivis_get_suggested_prompts`, `aivis_list_active_providers`, `aivis_list_active_countries`, `aivis_get_page_scores`, `aivis_list_page_runs`, `aivis_list_serp_discovery_runs`, `aivis_list_prompt_provider_visibility`, `aivis_list_search_queries`, `aivis_list_google_connections`, `aivis_list_gsc_properties`, `aivis_get_account_settings`, `aivis_list_ai_providers`, `aivis_list_project_ai_providers`.
 
 **`ai-visibility:write`** — `aivis_create_project`, `aivis_update_project`, `aivis_delete_project`, `aivis_run_project_prompts`, `aivis_bulk_create_topics`, `aivis_update_topic`, `aivis_generate_topic_metadata`, `aivis_delete_topic`, `aivis_create_prompt`, `aivis_delete_prompt`, `aivis_create_brand_domain`, `aivis_update_brand_domain`, `aivis_delete_brand_domain`, `aivis_update_brand`, `aivis_merge_brands`, `aivis_promote_brand`, `aivis_unmerge_brand`, `aivis_generate_suggested_topics`, `aivis_generate_suggested_prompts`, `aivis_trigger_page_run`, `aivis_attach_gsc_property`, `aivis_update_gsc_property`, `aivis_detach_gsc_property`, `aivis_enable_project_ai_provider`, `aivis_disable_project_ai_provider`, `aivis_sync_project_ai_providers`.
 
-**`analyze:read`** — `analyze_list_projects`, `analyze_list_crawls`, `analyze_get_crawl_summary`, `analyze_list_segments`, `analyze_list_reports`, `analyze_get_report_metadata`, `analyze_list_report_rows`, `analyze_get_url_detail`, `analyze_list_url_patterns`, `analyze_get_aggregation_catalog`, `analyze_explore_urls_aggregates`, `analyze_get_health_trend`, `analyze_get_report_trend`, `analyze_list_tasks`, `analyze_get_task`, `analyze_get_report_export`, `analyze_list_single_page_requests`, `analyze_get_single_page_request`, `analyze_get_single_page_request_html`, `analyze_list_custom_metric_generations`, `analyze_get_custom_metric_generation`.
+**`analyze:read`** — `analyze_list_projects`, `analyze_list_crawls`, `analyze_get_crawl_summary`, `analyze_list_segments`, `analyze_list_reports`, `analyze_get_report_metadata`, `analyze_list_report_rows`, `analyze_get_url_detail`, `analyze_get_crawl_url_html`, `analyze_list_url_patterns`, `analyze_get_aggregation_catalog`, `analyze_explore_urls_aggregates`, `analyze_get_health_trend`, `analyze_get_report_trend`, `analyze_list_tasks`, `analyze_get_task`, `analyze_get_report_export`, `analyze_list_single_page_requests`, `analyze_get_single_page_request`, `analyze_get_single_page_request_html`, `analyze_get_single_page_request_output`, `analyze_list_custom_metric_generations`, `analyze_get_custom_metric_generation`.
 
 **`analyze:write`** — `analyze_create_segment`, `analyze_update_segment`, `analyze_delete_segment`, `analyze_create_report_task`, `analyze_update_task`, `analyze_delete_task`, `analyze_generate_task_ticket_details`, `analyze_export_report`, `analyze_run_crawl`, `analyze_create_single_page_request`, `analyze_create_custom_metric_generation`, `analyze_update_custom_metric_generation`, `analyze_delete_custom_metric_generation`, `analyze_request_custom_metric_generation`, `analyze_run_custom_metric_generation_tests`, `analyze_link_custom_metric_container_to_project`, `analyze_update_custom_metric_container_project`, `analyze_unlink_custom_metric_container_from_project`.
 
@@ -220,6 +234,24 @@ If your custom endpoint needs extra headers (e.g. forcing a toolset scope withou
 }
 ```
 
+For a headless service-account connection, set the credential through the host's secret or environment-variable support when available. If the host only accepts literal headers, use its local MCP configuration or keep the edited plugin file uncommitted, and replace the placeholder below; never commit the real key:
+
+```json
+{
+  "mcpServers": {
+    "lumar": {
+      "type": "http",
+      "url": "https://mcp.lumar.io/mcp/x/analyze:read,analyze:write",
+      "headers": {
+        "Authorization": "Bearer lmr_sa_<serviceAccountId>_<secret>"
+      }
+    }
+  }
+}
+```
+
+`x-api-key: lmr_sa_<serviceAccountId>_<secret>` is an equivalent fallback for service-account keys when `Authorization` is not set. Toolset selection still comes from the scoped URL or `X-MCP-Toolsets` header; the service account's Lumar role remains the final authorization boundary.
+
 #### Example — Cursor with a local checkout pointing at staging
 
 1. Clone this repo locally:
@@ -251,6 +283,18 @@ The same approach works for Claude Code (`/plugin marketplace add /path/to/lumar
 
 > Keep your local edit on a branch (or just don't commit `mcp.json`) so a `git pull` doesn't clobber it — and remember to switch back to production before opening any PRs against this repo.
 
+### Account credits
+
+`lumar_get_account_credits` is always available in the `context` toolset. It reports the remaining `seo`, `accessibility`, `siteSpeed`, `contentEvals`, `aiVisibilityUi`, and combined `aiVisibility` credits for an account. Use it before quota-consuming work such as `analyze_run_crawl` or a bulk AI Visibility run. It is available to every account member, but does not expose per-crawl consumption; use the Lumar dashboard's Credit Usage page for that breakdown.
+
+### Stored crawl HTML and Single Page Requester outputs
+
+`analyze_get_crawl_url_html` returns stored crawl HTML inline by exact `url` or report-row `urlId`, preferring the rendered DOM when both rendered and static attachments exist. Stored HTML is only present when the HTML custom metric container was enabled for that crawl. If it returns `not_found/stored_html`, use `analyze_create_single_page_request` followed by `analyze_get_single_page_request_html` for a fresh capture.
+
+`analyze_get_single_page_request_output` returns a finished SPR run's named result document inline. Common names include `publishedDcCrawlerStep` (all metrics, custom metrics, and extractions) and `publishedDcCrawlerLinkSeo` (links), plus accessibility and site-speed outputs when the project produced them. Both inline-reading tools use `offset` / `nextOffset` pagination.
+
+`analyze_create_single_page_request` now accepts per-run `userAgentCode`, `userAgentIsMobile`, `useRenderer`, and `useStealthMode` overrides. Other crawl settings continue to come from the project.
+
 ### Identifiers and pagination
 
 Every entity in a response carries a single numeric `id`; pass that value as the matching `*Id` on follow-up tools. The exception is `analyze_export_report`, whose `reportDownload.id` is an opaque polling token for `analyze_get_report_export`.
@@ -261,13 +305,13 @@ Paginated responses include `pagination.next_cursor`, `pagination.has_next_page`
 
 Some tools trim large fields by default and expose `verbose: true`:
 
-| Tool                           | What `verbose=true` adds                                                                                                                           |
-| :----------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `analyze_list_reports`         | Long report-template description, definition, effect, impact, and solutions text per row                                                            |
-| `analyze_get_single_page_request` | Full crawl settings snapshot, raw outputs, container versions, response headers, and signed output URLs                                             |
-| `analyze_get_custom_metric_generation` | Generated handler source / download URL for the linked custom metric container version                                                        |
-| `aivis_get_prompt_run_details` | Full `fullAnswerText` and raw citation / mention / search-query arrays                                                                              |
-| `aivis_list_page_runs`         | LLM reasoning text plus per-snippet precision, per-competitor uniqueness, per-model brand-mention, sentiment, GSC, and QDF evaluation arrays        |
+| Tool                                   | What `verbose=true` adds                                                                                                                     |
+| :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| `analyze_list_reports`                 | Long report-template description, definition, effect, impact, and solutions text per row                                                     |
+| `analyze_get_single_page_request`      | Full crawl settings snapshot, raw outputs, container versions, response headers, and signed output URLs                                      |
+| `analyze_get_custom_metric_generation` | Generated handler source / download URL for the linked custom metric container version                                                       |
+| `aivis_get_prompt_run_details`         | Full `fullAnswerText` and raw citation / mention / search-query arrays                                                                       |
+| `aivis_list_page_runs`                 | LLM reasoning text plus per-snippet precision, per-competitor uniqueness, per-model brand-mention, sentiment, GSC, and QDF evaluation arrays |
 
 ### Timeframes
 
@@ -277,7 +321,7 @@ Analytics tools accept a `timeframe` parameter — a named window (`last_7d`, `l
 
 - Claude Code, Cursor, **or** Codex (with plugin support)
 - A [Lumar](https://www.lumar.io) account with the **MCP Server subscription addon** enabled, plus entitlements for the products whose toolsets you want to use (AI Visibility and/or Lumar Analyze)
-- Browser available on first connect for OAuth login
+- Browser available on first connect when using interactive OAuth; headless clients can use a user key or service-account key instead
 
 ## License
 

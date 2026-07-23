@@ -20,8 +20,9 @@ Manage Analyze projects at the project-wide settings layer. These tools live in 
 
 ## Step 0: Resolve account and entitlement
 
-1. `lumar_get_me` → choose the account. System admins get no account list — resolve the account by name with `lumar_search_accounts`. Create/update require Editor role on the account.
-2. Check `subscription.analyzeModulesAvailable` before create. Module mapping:
+1. Confirm the `analyze_create_project`, `analyze_update_project`, and `analyze_clone_project` tools are present. If they are missing while other Analyze write tools exist, the connection lacks `analyze:admin`: reconnect and select **Lumar Analyze — Project admin** on the consent screen. Do not tell the user project administration is unsupported.
+2. `lumar_get_me` → choose the account. System admins get no account list — resolve the account by name with `lumar_search_accounts`. Create/update require Editor role on the account.
+3. Check `subscription.analyzeModulesAvailable` before create. Module mapping:
    - `SEO` → `seo`
    - `Basic` → `custom-crawl`
    - `Accessibility` → `accessibility`

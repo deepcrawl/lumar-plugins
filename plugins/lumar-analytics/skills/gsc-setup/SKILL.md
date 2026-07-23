@@ -17,12 +17,14 @@ In the UI, GSC setup lives in the self-serve Lumar GEO app only (not Lumar Analy
 
 ## Step 0: Resolve account + project
 
-1. `lumar_get_me` → pick an AI-Visibility-entitled account (ask if multiple). For Lumar system admins no account list is returned — resolve the account by name with `lumar_search_accounts` instead.
+1. `lumar_get_me` → pick an AI-Visibility-entitled account and record `me.isServiceAccount` (ask if multiple). For Lumar system admins no account list is returned — resolve the account by name with `lumar_search_accounts` instead.
 2. `aivis_list_projects` to resolve the project. Capture `projectId`.
 
 ## Step 1: Discover available Google connections + GSC sites
 
-1. `aivis_list_google_connections` → enumerates every Google OAuth credential the authenticated user has, each with the list of `searchConsoleSites` that token can read.
+If `me.isServiceAccount: true`, skip this discovery step: `aivis_list_google_connections` is user-bound and not registered. Existing project bindings can still be inspected and managed, and an attachment can use an already-known `googleConnectionId`; discovering or re-authenticating a user's Google connection requires an interactive user session or the Lumar dashboard.
+
+1. In a user session, `aivis_list_google_connections` → enumerates every Google OAuth credential the authenticated user has, each with the list of `searchConsoleSites` that token can read.
 2. Filter to working, GSC-capable connections:
    - `isWorking: true` — `isWorking: false` means the OAuth token failed at last use; tell the user to re-auth in the Lumar dashboard before continuing.
    - `searchConsoleSites: non-null` — null means the token wasn't granted the Search Console scope. The user needs to reconnect Google with the right scope in the Lumar dashboard.
@@ -67,7 +69,7 @@ When the user says "disconnect GSC", "remove the search console link", etc.:
 
 After a successful attach:
 
-- The binding is live, but `gscQueryScore` only appears on **new** page runs (existing rows aren't backfilled). Trigger a page run via `aivis_trigger_page_run` (per URL) or `aivis_run_project_prompts` (project-wide) to see scores quickly — or wait for the next scheduled cycle.
+- The binding is live, but `gscQueryScore` only appears on **new** page runs (existing rows aren't backfilled). Trigger a page run via `aivis_trigger_page_run` (per URL) or `aivis_run_project_prompts` (project-wide) to see scores quickly — or wait for the next scheduled cycle. Before a project-wide run, call `lumar_get_account_credits` and surface the combined `aiVisibility` balance.
 - If the user wants to verify the scoring is working, point them at `aivis_get_page_scores` or `aivis_list_page_runs` (with `verbose: true` to see the `gscQueryEvaluations` array) once a fresh run completes.
 
 ## Output
