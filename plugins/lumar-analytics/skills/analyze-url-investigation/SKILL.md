@@ -1,6 +1,6 @@
 ---
 name: analyze-url-investigation
-description: Investigate a single URL in a Lumar Analyze crawl — crawl metrics, search-query performance, site-speed audits, accessibility issues, and structured-data findings, like the Resource Detail screen in Core UI. Use this skill whenever someone asks "why is this URL flagged?", "what's wrong with `<url>`?", names a specific URL and wants a full diagnostic, or asks for the accessibility/site-speed/schema breakdown of one page. Also trigger when users want to see the GSC search queries a URL ranks for.
+description: Investigate a single URL in a Lumar Analyze crawl — crawl metrics, stored HTML, search-query performance, site-speed audits, accessibility issues, and structured-data findings, like the Resource Detail screen in Core UI. Use this skill whenever someone asks "why is this URL flagged?", "what's wrong with `<url>`?", "show me the crawled HTML", names a specific URL and wants a full diagnostic, or asks for the accessibility/site-speed/schema breakdown of one page. Also trigger when users want to see the GSC search queries a URL ranks for.
 ---
 
 # Analyze URL Investigation
@@ -12,6 +12,7 @@ Pull a Resource-Detail-style view of one URL: status, canonical, content metrics
 - **project_or_crawl**: Project name, domain, or specific crawl reference.
 - **url**: The URL the user wants to investigate. May be a full URL or a `urlDigest` from a report row.
 - **datasources**: Optional list — restrict the tabs fetched (default: all core datasources).
+- **include_html**: Optional — fetch the stored rendered or static page source captured by the crawl.
 
 ## Step 0: Resolve account, project, and crawl
 
@@ -41,6 +42,10 @@ Render a per-section summary. Skip a section entirely if it returned zero rows �
 - **Search queries (GSC)** — top 5 queries by clicks; flag queries with high impressions but low CTR.
 - **Structured-data** — list block types and issues by severity.
 
+When the user asks for the crawled source, call `analyze_get_crawl_url_html` with `crawlId` and exactly one of `url` or `urlId`. It returns the body inline and auto-picks stored HTML, preferring `HtmlStoring/rendered-body.html` over the static body. Pass `attachmentName: "HtmlStoring/static-body.html"` when the user specifically needs pre-JavaScript source. Page through a truncated response with `offset: nextOffset`.
+
+Stored HTML only exists when the HTML custom metric container was enabled for that crawl. On `not_found/stored_html`, do not say the page is unreachable: offer a fresh capture with `analyze_create_single_page_request` followed by `analyze_get_single_page_request_html`. Other attachments are listed in `otherAttachments` and can be selected with `attachmentName`.
+
 ## Step 4: Diagnose
 
 A few sentences answering: **why is this URL in the crawl's issue reports?** Tie each datasource finding back to a likely report match (e.g. "low Lighthouse performance score + high LCP savings → this URL is in `site_speed_lcp_slow`; accessibility violations → `accessibility_critical_issues`").
@@ -52,11 +57,13 @@ Markdown:
 1. **TL;DR** — URL, status, headline problem in one sentence.
 2. **Crawl-row table** — key metrics + values.
 3. **Per-datasource sections** as above (omit empties).
-4. **Diagnosis** — narrative tying findings to reports.
-5. **Next steps** — invoke `analyze-report-deep-dive` on the implicated reports, or create a focused task.
+4. **Stored source** — only when requested; identify whether it is rendered or static and note truncation.
+5. **Diagnosis** — narrative tying findings to reports.
+6. **Next steps** — invoke `analyze-report-deep-dive` on the implicated reports, or create a focused task.
 
 ## Common pitfalls
 
 - **`url` matching is exact** — a typo, missing trailing slash, or protocol mismatch yields `validation/url_not_found`, not a fuzzy match. Pass exactly one of `url` / `urlId`; supplying both (or neither) is a validation error.
 - **Datasource availability varies by module** — a project on the `Basic` / `SEO` module won't have accessibility audit data; `CrawlAccessibilityIssues` will return empty. Don't treat empty as broken.
 - **`CrawlSearchQueries` vs `CrawlSearchQueriesWithLandingPages`** — the WithLandingPages variant is what Core UI's ResourceDetail uses. Default to it.
+- **Stored HTML is opt-in crawl data** — its absence means the HTML container was not enabled or the attachment expired, not that the URL failed to crawl.

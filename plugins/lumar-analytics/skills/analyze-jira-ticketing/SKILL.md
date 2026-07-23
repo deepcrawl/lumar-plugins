@@ -18,16 +18,21 @@ Bridge Lumar Analyze tasks to Jira. This skill uses the first-party Analyze task
 
 ## Step 0: Resolve task
 
-1. If the task ID is known, call `analyze_get_task`.
-2. Otherwise call `analyze_list_tasks` with `query` or the current project/account scope and ask if multiple tasks match.
+1. Call `lumar_get_me` and record `me.isServiceAccount`.
+2. If the task ID is known, call `analyze_get_task`.
+3. Otherwise call `analyze_list_tasks` with `query` or the current project/account scope and ask if multiple tasks match.
 
-When the user asks for ticket copy, call `analyze_generate_task_ticket_details` with the task ID and optional `crawlId` (report context for the generation). It requires AI features enabled on the account. It is async; poll `analyze_get_task` for `ticketGenerationFinishedAt` and `ticketDetails` only when the user wants to wait.
+When the user asks for ticket copy in a user session, call `analyze_generate_task_ticket_details` with the task ID and optional `crawlId` (report context for the generation). It requires AI features enabled on the account. It is async; poll `analyze_get_task` for `ticketGenerationFinishedAt` and `ticketDetails` only when the user wants to wait.
+
+In a service-account session, ticket-detail generation and Jira link creation are user-bound and not registered (`analyze_generate_task_ticket_details`, `analyze_create_task_external_link`). Jira reads and `analyze_delete_task_external_link` still work when `analyze:external` is selected. For creating a link, switch to an interactive user session or use the Lumar dashboard.
 
 ## Step 1: Resolve Jira authentication
 
 Call `analyze_list_jira_authentications`. If several working connections exist, ask which Jira site to use. If `isWorking: false`, tell the user to re-authenticate Jira in the Lumar dashboard before linking.
 
-## Step 2: Link existing issue or create a new one
+## Step 2: Link existing issue or create a new one (user sessions only)
+
+If `me.isServiceAccount: true`, stop before this step. The Jira read tools can help resolve the intended issue, but only a user session or the dashboard can create the task link.
 
 **Existing issue**
 
@@ -62,3 +67,4 @@ Include:
 - **Two create modes** — pass either `jiraIssueIdOrKey` for existing issues (with no create fields), or both `jiraProjectId` and `jiraIssueTypeId` for new issues (`jiraIssueSummary` alone is not enough). Mixing modes is rejected up front.
 - **Required fields** — use `analyze_get_jira_create_field_metadata` before guessing Jira custom field IDs.
 - **AI ticket details are async** — generate and poll before passing `useAiTicketDetails: true`.
+- **Service-account boundary** — service accounts can inspect Jira and remove an existing task link, but cannot generate ticket copy or create a new link.

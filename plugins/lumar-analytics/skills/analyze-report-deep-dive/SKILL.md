@@ -17,7 +17,7 @@ Filter and inspect URLs inside one Analyze report, then (optionally) create a tr
 
 ## Step 0: Resolve account, project, crawl, and report
 
-1. `lumar_get_me` → pick Analyze-entitled account (ask if multiple; system admins get no account list — resolve by name with `lumar_search_accounts`).
+1. `lumar_get_me` → pick Analyze-entitled account and record `me.isServiceAccount` (ask if multiple; system admins get no account list — resolve by name with `lumar_search_accounts`).
 2. `analyze_list_projects` (`query`) → pick project. Capture `projectId`.
 3. `analyze_list_crawls` (`projectId`, `status: "finished"`, `limit: 5`) → latest finished crawl unless named.
 4. Resolve the **report template code**: if the user named a code, use it directly; otherwise `analyze_list_reports` (`crawlId`, `query: <user phrase>`, `limit: 10`) and ask if multiple match. Never silently pick.
@@ -53,9 +53,10 @@ There is **no `analyze_compare_crawls` tool**. To compare the same report across
 
 If the user opted in:
 
-1. Confirm: title, optional description, priority (default `Low`; suggest `High` if total ≥ 100 URLs or status codes ≥ 500), assignees (email list), deadline (ISO-8601), and whether to notify.
-2. `analyze_create_report_task` (`crawlId`, `reportTemplateCode`, `taskType`, `title`, plus the same `filterRules` + `filterOperator` + `reportType` + `segmentId` from Step 2 — this is how the Lumar UI scopes the task to the same URL set). `taskType` is required: `Default` = filter task, recomputed each crawl (the usual choice here); `TaggedURLs` snapshots a fixed URL set and needs the account's tagged-URLs feature plus a Crawl URLs report (e.g. `all_pages`).
-3. Echo the returned task ID and the filter that was attached.
+1. If `me.isServiceAccount: true`, explain that `analyze_create_report_task` is user-bound and is not registered for service-account sessions. Stop the task-creation branch and offer an interactive user session or the Lumar dashboard; do not imply the selected service-account role can unlock it.
+2. Confirm: title, optional description, priority (default `Low`; suggest `High` if total ≥ 100 URLs or status codes ≥ 500), assignees (email list), deadline (ISO-8601), and whether to notify.
+3. `analyze_create_report_task` (`crawlId`, `reportTemplateCode`, `taskType`, `title`, plus the same `filterRules` + `filterOperator` + `reportType` + `segmentId` from Step 2 — this is how the Lumar UI scopes the task to the same URL set). `taskType` is required: `Default` = filter task, recomputed each crawl (the usual choice here); `TaggedURLs` snapshots a fixed URL set and needs the account's tagged-URLs feature plus a Crawl URLs report (e.g. `all_pages`).
+4. Echo the returned task ID and the filter that was attached.
 
 ## Step 6: Deliverable
 

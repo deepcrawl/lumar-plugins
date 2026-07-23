@@ -22,8 +22,9 @@ Queue a new crawl for an Analyze project, bypassing its schedule, and hand the u
 A run consumes URL quota and overlaps the schedule. Before calling the mutation, do a quick read so the user isn't surprised:
 
 1. `analyze_list_crawls` (`projectId`, `limit: 3`, newest-first).
-2. If the most recent crawl is `Queued` or `Crawling`, **stop and tell the user** there's already a crawl in flight (return its `id`, `coreUIUrl`, `statusEnum`, and `createdAt`). Ask whether to queue another one anyway — usually they'll prefer to wait.
-3. If the most recent finished crawl is < 1 hour old, surface that fact and confirm the user really wants another run. Don't block — just make the cost visible.
+2. `lumar_get_account_credits` (`accountId`) → check the remaining `seo` credits. A standard crawled URL consumes one SEO credit. If the balance is zero or obviously below the project's expected crawl size, stop and explain the quota risk; per-crawl usage detail lives in the dashboard's Credit Usage page.
+3. If the most recent crawl is `Queued` or `Crawling`, **stop and tell the user** there's already a crawl in flight (return its `id`, `coreUIUrl`, `statusEnum`, and `createdAt`). Ask whether to queue another one anyway — usually they'll prefer to wait.
+4. If the most recent finished crawl is < 1 hour old, surface that fact and confirm the user really wants another run. Don't block — just make the cost visible.
 
 ## Step 2: Queue the crawl
 
