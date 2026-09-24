@@ -1,4 +1,4 @@
-# Lumar plugins for Claude Code, Cursor, and Codex
+# Lumar plugins for Claude Code, Cursor, and Codex (plus Perplexity)
 
 Lumar analytics as a plugin for **Claude Code**, **Cursor**, and **OpenAI Codex**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend, page evaluation, GSC, provider management, brand curation) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, tasks, crawls, segments, single-page requests, custom metrics, Jira links, project admin). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
 
@@ -95,6 +95,25 @@ Codex reads `.agents/plugins/marketplace.json` at the repo root and the per-plug
 3. **Authenticate the Lumar MCP server** — Codex will prompt on first install (`ON_INSTALL` policy) and run the browser OAuth flow against `https://mcp.lumar.io/mcp`.
 
 4. **Use a skill** — same natural-language triggers as Claude Code and Cursor.
+
+## Quickstart — Perplexity
+
+Perplexity has no plugin marketplace, so it connects to the Lumar MCP server directly as a custom remote connector. Custom connectors need a paid Perplexity plan (Pro, Max, or Enterprise).
+
+1. **Open connector settings.** Click your profile in the lower left, choose **All settings**, then **Connectors**.
+2. **Add the connector.** Click **+ Custom connector**, choose **Remote**, and enter:
+   - **Name:** `Lumar`
+   - **MCP server URL:** `https://mcp.lumar.io/mcp`
+   - **Authentication:** `OAuth`. Leave Client ID and Client Secret empty; the Lumar server supports dynamic client registration.
+   - **Transport:** `Streamable HTTP`
+3. **Acknowledge the risk notice and click Add.**
+4. **Sign in.** Click the new Lumar connector card. A browser window opens the Lumar login, then the Lumar consent screen.
+5. **Choose Compact V2 and your toolsets on the consent screen.** Compact V2 is recommended for Perplexity: it keeps the tool list to three tools and lets Perplexity find the bundled workflow skills through `lumar_find`. See [Tool surfaces](#tool-surfaces) and [Available toolsets](#available-toolsets).
+6. **Turn the connector on in each thread.** On the prompt page, enable **Lumar** under sources before asking. If Perplexity answers from web results instead, the connector is off for that thread.
+
+Perplexity does not install the skill files in this repository. The same skills are served by the MCP server itself, so ask in natural language, for example "Run an AI Visibility audit for my brand" or "What are the top issues on my last crawl?"
+
+Access still requires the MCP Server subscription addon on your Lumar account. Perplexity asks you to confirm before it runs any action that changes data.
 
 ## Skills
 
