@@ -6,7 +6,7 @@ description: How to inspect and edit a project's crawl settings over MCP — whi
 # Analyze project crawl settings
 
 `analyze_update_project` covers the whole settings surface the Analyze
-"Edit crawl settings" wizard writes. Field names match graph-api's
+"Edit crawl settings" wizard writes. Field names match the Lumar API's
 `UpdateProjectInput` exactly, and every field is optional — anything omitted is
 left untouched. Changes apply to the **next crawl**, not the current one.
 
@@ -22,7 +22,7 @@ toolset. Step 1 below additionally needs `analyze:read`.
    echoes the full post-write state, so you can verify in the same call.
 
 Send only what you are changing. Do NOT spread the whole `settings` block into
-the update: while a crawl is running graph-api rejects any setting outside a small
+the update: while a crawl is running the Lumar API rejects any setting outside a small
 allowlist — `maximumCrawlRate`, `maximumCrawlRateAdvanced`, `limitLevelsMax`,
 `limitPagesMax`, `autoFinalizeOnCrawlLimits`, `compareToCrawl` and the three
 `failureRate*` fields — and submitting a field counts as changing it even when
@@ -199,7 +199,7 @@ signature you did not touch.
 
 ## Unsetting a value
 
-Scalar settings that graph-api stores as nullable accept `null` to clear them —
+Scalar settings that the Lumar API stores as nullable accept `null` to clear them —
 `testSiteDomain`, `mobileHomepageUrl`, `industryCode`, `robotsOverwrite`, most
 report thresholds, the viewport overrides, and so on. Two exceptions reject null
 despite a nullable column, because their upstream validators do not skip it:
@@ -271,7 +271,7 @@ is available, use the `analyze-report-adjustment` skill to create, update or
 reset them. Numeric report thresholds remain in the `thresholds` section above.
 
 Module changes (`moduleCode` is fixed at creation) and `renderIdleDuration` are
-admin-only in graph-api and deliberately absent. Source _integration_ config —
+admin-only in the Lumar API and deliberately absent. Source _integration_ config —
 Google Search Console, GA4, Majestic, Adobe, log files — lives on
 separate entities: see the `analyze:external` / `analyze:admin` Google tools.
 Schedules are `analyze_create_schedule` / `analyze_update_schedule`, not project

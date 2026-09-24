@@ -84,7 +84,7 @@ exactly 1 credit per URL — but drawn from that pool, not from SEO crawl credit
 Enabling it therefore changes _which_ budget the crawl spends, not just how much.
 
 `analyze_list_project_custom_metrics` also returns `project.costPerUrl` —
-graph-api's own preview of the current total per URL, its component breakdown,
+the Lumar API's own preview of the current total per URL, its component breakdown,
 and the pool(s) it draws from. Prefer quoting that over adding up container costs
 yourself. Pair it with `lumar_get_account_credits` to answer "can we afford
 this crawl?", and with `lumar_get_credit_usage` (`includeCostBreakdown: true`)
