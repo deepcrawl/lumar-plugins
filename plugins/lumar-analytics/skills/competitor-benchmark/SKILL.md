@@ -41,11 +41,16 @@ For each topic returned by `aivis_list_topics` (primary brand), pull the same me
 
 1. Call `aivis_list_topics` once per competitor brand ID. (Topics are project-scoped, so the topic IDs are stable across brands — you're just changing the lens.)
 2. Build a matrix:
+
    - Rows: topics (project-wide)
    - Columns: primary brand + each competitor
    - Cells: visibility index (`avgVisibilityIndex`)
 
-3. Surface:
+3. Shortlisting a large project: matrixing every topic is expensive, so narrow the row set first with one call — `aivis_list_topics` with `sortBy: "mentionShareOfVoice", sortDirection: "ASC"` and `brandTypes: ["Own", "Competitor"]`. Then matrix only the shortlisted topics through step 1.
+
+   This sorts on the primary brand's own share, **not** on the `gap` each row carries, so the order alone is not a priority list: a topic where the primary holds 10% against a 10% leader (gap 0) sorts ahead of one where it holds 20% against an 80% leader (gap −60). Take a generous slice — several pages — and rank it yourself by the most negative `gap`. Topics with no measurement in the window sort last in either direction.
+
+4. Surface:
    - **Topics where the primary wins** (highest index in row) — at least 3 examples.
    - **Topics where a competitor wins by ≥ 10 points** — at least 3 examples. These are the priority gaps.
    - **Topics where no brand is doing well** (all < 20) — "open territory" the primary can claim with more prompts/content.
@@ -79,7 +84,7 @@ Write the benchmark as a markdown report with:
 2. **Leaderboard table** — top brands with deltas.
 3. **Topic matrix** — wins / losses / open territory.
 4. **Citation vs mention pattern** — which side of the asymmetry each brand sits on.
-5. **Recommended actions** — 3–5 specific moves. For each, suggest which skill to run next (e.g. `/lumar-analytics:prompt-investigation <prompt-id>`).
+5. **Recommended actions** — 3–5 specific moves. For each, suggest which skill to run next (e.g. the `prompt-investigation` skill on a prompt id).
 
 ## Common pitfalls
 

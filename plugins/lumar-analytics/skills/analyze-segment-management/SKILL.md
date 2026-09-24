@@ -12,7 +12,7 @@ Create and maintain Analyze segments: reusable URL subsets that slice reports an
 - **project**: Analyze project name/domain. Required unless the user provides a segment ID and only wants deletion.
 - **segment**: Segment name or ID for update/delete.
 - **criteria**: Natural-language URL rules, report filters, explicit `filterRules`, or a raw nested `filter`.
-- **operation**: `create`, `update`, `delete`, `list`, or `inspect`. Infer from the request.
+- **operation**: `preview`, `create`, `update`, `delete`, `list`, or `inspect`. Infer from the request.
 - **run_crawl_after**: Optional. Only run a crawl after create/update if the user asks or needs fresh segment data immediately.
 
 ## Step 0: Resolve project and current segments
@@ -25,7 +25,7 @@ Ask when multiple projects or segments match. Never silently update or delete a 
 
 ## Step 1: Build filter rules
 
-For create/update with criteria:
+For preview or create/update with criteria:
 
 1. Get a recent finished crawl via `analyze_list_crawls` (`projectId`, `status: "finished"`, `limit: 1`).
 2. Call `analyze_get_report_metadata` with `crawlId` and `reportTemplateCode: "all_pages"` to discover valid CrawlUrl metric codes and allowed predicates.
@@ -34,18 +34,28 @@ For create/update with criteria:
 
 Two filter inputs, mutually exclusive — pass exactly one:
 
-- **`filterRules` + `filterOperator`** (preferred shorthand): same shape as `analyze_list_report_rows`. Rules are capped at 20. Use `filterOperator: "or"` only when the user asked for OR semantics; default is AND. The server writes the segment in the nested UI-compatible format (an outer OR of AND groups) automatically. Custom metrics are referenced with the dotted `customMetrics.<code>` form in `metricCode`.
-- **`filter`** (raw nested escape hatch): the exact `_and` / `_or` / `_not` ConnectionFilter JSON the API and dashboard use, sent verbatim. Metric leaves are `{ "<metricCode>": { "<predicate>": value } }`; custom metrics must be genuinely nested (`{ "customMetrics": { "<code>": { ... } } }`), never dotted keys. To keep the segment editable in the dashboard filter UI, stay with the OR-of-ANDs shape: `{ "_or": [ { "_and": [ ... ] } ] }` (deeper nesting and `_not` crawl correctly but render read-only).
+- **`filterRules` + `filterOperator`** (preferred shorthand): same shape as `analyze_list_report_rows`. Rules are capped at 20. Use `filterOperator: "or"` only when the user asked for OR semantics; default is AND. The server writes the segment in the nested UI-compatible format (an outer OR of AND groups) automatically. Custom metrics are referenced with the dotted `customMetrics.<code>` form in `metricCode`; an object array's member takes one more segment (`customMetrics.<code>.<member>`, or plain `<code>.<member>` for a standard object-array metric such as `schemaIssuesCountByType.schemaType`).
+- **`filter`** (raw nested escape hatch): the exact `_and` / `_or` / `_not` ConnectionFilter JSON the API and dashboard use, sent verbatim. Metric leaves are `{ "<metricCode>": { "<predicate>": value } }`; custom metrics and object-array members must be genuinely nested (`{ "customMetrics": { "<code>": { ... } } }`, `{ "schemaIssuesCountByType": { "schemaType": { ... } } }`), never dotted keys. To keep the segment editable in the dashboard filter UI, stay with the OR-of-ANDs shape: `{ "_or": [ { "_and": [ ... ] } ] }` (deeper nesting and `_not` crawl correctly but render read-only).
 
 When editing an existing segment, read its `filter` field from `analyze_list_segments` (the canonical nested JSON that round-trips), change what you need, and pass the result straight back to `analyze_update_segment` as `filter` — no conversion. Prefer `filter` over the raw stored `crawlUrlFilter`, which may be in a legacy flat shape.
 
-## Step 2: Write
+## Step 2: Preview the filter
+
+For filters containing at most 20 predicates, call `analyze_preview_segment` with the finished `crawlId` from the target project and exactly the filter inputs you intend to save. It requires only `analyze:read` and returns `matchingUrlCount` without saving a segment or starting a crawl. Segment writes can accept larger raw filters, but those cannot be previewed in one call; explain that limit and continue with the authorized write when the definition is otherwise ready.
+
+Accessibility and SiteSpeed previews enforce the same limited segment grammar as writes: URL, discovery-source, custom-extraction, and custom-metric fields joined with AND/OR groups. They reject `_not` and other Crawl URL metrics.
+
+Show the count and crawl used. If the count is zero or unexpectedly broad, check the criteria and metric codes, adjust the filter, and preview again. An unavailable-data error is not a zero match count: choose another finished, unarchived crawl when available. If none is available, report that the preview cannot be completed.
+
+For a preview-only request, stop with the proposed filter and count. For an authorized create/update, save the same previewed filter. Preview counts apply to the selected crawl; they do not guarantee future counts or validate write permissions and segment quotas. Skip preview for changes to name/group only or deletion.
+
+## Step 3: Write
 
 - Create: `analyze_create_segment` with `projectId`, `name`, optional `group`, and the filter (`filterRules` + optional `filterOperator`, or raw `filter`). A filter is required.
 - Update: `analyze_update_segment` with `segmentId` plus only changed fields. When `filterRules` or `filter` is passed it fully replaces the existing filter — there is no partial merge.
 - Delete: confirm first, then `analyze_delete_segment`. Deletion removes the segment definition and generated per-crawl segment data, and unscopes tasks attached to that segment.
 
-## Step 3: Aftercare
+## Step 4: Aftercare
 
 New or changed segment filters do not backfill historic crawls. Tell the user the segment will populate on the next crawl. If they asked for immediate data, call `analyze_run_crawl` after the segment write and return the queued crawl ID/dashboard URL.
 
@@ -55,9 +65,9 @@ For verification, use `analyze_list_segments` again. For crawl-level generation 
 
 Include:
 
-1. Segment name and ID.
+1. Segment name and ID, if saved.
 2. Filter rules in plain English.
-3. Whether data is available now or waits for the next crawl.
+3. Preview match count and crawl used, or why preview was unavailable; for saved segments, whether data is available now or waits for the next crawl.
 4. Any crawl you queued.
 
 ## Common pitfalls

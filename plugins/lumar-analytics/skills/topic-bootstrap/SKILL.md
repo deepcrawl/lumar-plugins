@@ -13,7 +13,7 @@ Onboard a brand to Lumar AI Visibility in one pass: create the project, propose 
 - **brand_domain**: The brand's primary domain as a bare hostname (e.g. `lumar.io` — no protocol, no path).
 - **brand_description**: A few sentences about what the brand does, who it serves, and its primary category. The richer this is, the better the proposed topics.
 - **competitors**: Optional list of competitor names + domains to track alongside the primary brand.
-- **country**: Optional ISO 3166-1 alpha-2 region for the prompts (e.g. `US`, `GB`, `DE`). Set per-prompt at creation time; omit for worldwide. Ask the user if the brand is region-specific.
+- **country**: Optional ISO 3166-1 alpha-2 region for the prompts (e.g. `US`, `GB`, `DE`). Set per-prompt at creation time. Omitted prompts inherit the project's `country` (worldwide when the project has none); pass `null` for worldwide even when the project has a country. Ask the user if the brand is region-specific, and prefer setting the market on the project.
 
 ## Step 0: Resolve account
 
@@ -29,9 +29,10 @@ Onboard a brand to Lumar AI Visibility in one pass: create the project, propose 
 
 ## Step 2: Create the project
 
-1. Validate `brand_domain` is a bare hostname. Strip any `https://`, trailing slash, or path the user accidentally included.
-2. `aivis_create_project` with a project `name` and `primaryBrand: { name, domain, includeSubdomains? }` (the cleaned hostname). Optionally set `scheduleCadence` (`daily` | `weekly` | `every_two_weeks` | `monthly`). Prompts run automatically after creation.
-3. Capture the returned project ID and primary brand ID — every subsequent call needs them.
+1. `lumar_get_account_credits` (`accountId`) → check the project cap before mutating: create only when `aiVisibilityProjectsLimit` is null (no cap) or `aiVisibilityProjectsCount < aiVisibilityProjectsLimit`. At the cap, stop and tell the user the account is full — offer to add topics to an existing project (Step 3) or to have a Lumar admin raise the limit, rather than calling the mutation and reporting `AI_VISIBILITY_PROJECTS_LIMIT_REACHED`. The same response carries `aiVisibilityNewProjectPromptsLimit`, the prompt budget a project created now would have — note it, so Step 3 proposes a topic set whose prompts fit. That number is cadence-dependent, so when the project will not be daily pass `newProjectScheduleCadence` (`daily` | `weekly` | `every_two_weeks` | `monthly` | `every_two_months` | `quarterly`) matching the `scheduleCadence` you are about to create it with; otherwise you will size the set against the much smaller daily budget.
+2. Validate `brand_domain` is a bare hostname. Strip any `https://`, trailing slash, or path the user accidentally included.
+3. Use `aivis_list_market_codes` to discover accepted country and language codes with English names before choosing a market. Prompts accept country only, not language. Then call `aivis_create_project` with a project `name` and `primaryBrand: { name, domain, includeSubdomains? }` (the cleaned hostname). Optionally set `scheduleCadence` (`daily` | `weekly` | `every_two_weeks` | `monthly` | `every_two_months` | `quarterly`) and the market: `country` (ISO 3166-1 alpha-2) and `language` (ISO 639-1). One project = one market — to compare US vs UK, create two projects. Omitted market fields inherit the account defaults from `aivis_get_account_settings`; pass `null` for worldwide / unspecified. Prompts created later without a `country` inherit the project's, and `language` steers suggested topic/prompt generation. Prompts run automatically after creation.
+4. Capture the returned project ID and primary brand ID — every subsequent call needs them.
 
 ## Step 3: Propose a topic set
 
@@ -54,6 +55,11 @@ This is the highest-leverage step. A good topic set has 8–15 topics, each focu
 - "Which <category> tool should I use for <use case>?"
 - "Recommend a <category> tool for <persona>"
 
+Tag each prompt `branded: true` when it names the brand and leave it off otherwise. Keep most of a
+topic's prompts unbranded — those measure whether the brand surfaces at all — plus a couple of
+branded ones, which measure how AI describes it when asked directly. `aivis_list_prompts` can then
+report the two separately with its `branded` filter.
+
 ### Present for review
 
 Show the proposed topics + sample prompts as a table. **Wait for the user to approve or edit** before any creation step. They almost always tweak names, drop topics, or swap in domain-specific phrasing.
@@ -61,7 +67,7 @@ Show the proposed topics + sample prompts as a table. **Wait for the user to app
 ## Step 4: Bulk-create topics and prompts
 
 1. `lumar_get_account_credits` (`accountId`) → surface the combined `aiVisibility` balance before creating prompts, because their initial provider runs consume AI Visibility credits. A zero balance does not prevent saving the approved topic structure, but do not promise that runs will populate immediately.
-2. `aivis_bulk_create_topics` with the approved list — up to 50 topics in one atomic call. Each topic carries its prompts as a nested array; each prompt may set a `country` (ISO 3166-1 alpha-2) for per-region targeting, or omit it for worldwide. Each topic needs ≥ 1 prompt; each prompt ≤ 2500 chars.
+2. `aivis_bulk_create_topics` with the approved list — up to 50 topics in one atomic call. Each topic carries its prompts as a nested array; each prompt may set a `country` (ISO 3166-1 alpha-2) for per-region targeting, omit it to inherit the project's country, or pass `null` for worldwide. Each topic needs ≥ 1 prompt; each prompt ≤ 2500 chars.
 3. If the user approved more than 50 topics (rare), batch into multiple calls — but warn first, since later batches won't roll back if an earlier batch fails.
 
 Show the resulting topic IDs in a confirmation table so the user can sanity-check.

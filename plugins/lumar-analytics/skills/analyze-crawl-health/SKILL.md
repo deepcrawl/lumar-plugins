@@ -21,7 +21,7 @@ Produce a structured snapshot of a Lumar Analyze crawl: identity, total URLs, to
 
 ## Step 1: Headline numbers and category snapshot
 
-Issue Step 1 + Step 2 + Step 3 in **parallel as a single batch** — they're independent reads once `crawlId` is known.
+Issue Step 1 + Step 2 in **parallel** — they're independent reads once `crawlId` is known. Step 3 depends on Step 1 unless the user named a category: the worst-scoring category comes from Step 1's `reportCategoriesSnapshot`, so only batch Step 3 in when the category is already known.
 
 1. `analyze_get_crawl_summary` (`crawlId`) — captures crawl metadata (URL count, status, run time), `reportCategoriesSnapshot` (per-category scores), and `crawlSegments` generation status.
 2. `analyze_list_reports` (`crawlId`, `issuesOnly: true`, `limit: 30`) — top issue reports across the crawl, sorted by total. Pass `segmentId` if scoping.

@@ -40,7 +40,7 @@ Before attaching, see what's already there:
 
 ## Step 3: Attach the property
 
-1. `aivis_attach_gsc_property` with `projectId`, `googleConnectionId` (from Step 1), and `siteUrl`.
+1. `aivis_attach_gsc_property` with `projectId`, `googleConnectionId` (from Step 1; in a service-account session, a previously known id — if none is available, stop and direct the user to an interactive session or the Lumar dashboard), and `siteUrl`.
 2. Optional filter args — only pass what the user asked for:
    - `searchType` — `Web` (default), `Image`, or `Video`. Leave default unless asked.
    - `country` — ISO 3166-1 alpha-2 (e.g. `US`, `GB`). Omit to include all countries.
@@ -69,8 +69,8 @@ When the user says "disconnect GSC", "remove the search console link", etc.:
 
 After a successful attach:
 
-- The binding is live, but `gscQueryScore` only appears on **new** page runs (existing rows aren't backfilled). Trigger a page run via `aivis_trigger_page_run` (per URL) or `aivis_run_project_prompts` (project-wide) to see scores quickly — or wait for the next scheduled cycle. Before a project-wide run, call `lumar_get_account_credits` and surface the combined `aiVisibility` balance.
-- If the user wants to verify the scoring is working, point them at `aivis_get_page_scores` or `aivis_list_page_runs` (with `verbose: true` to see the `gscQueryEvaluations` array) once a fresh run completes.
+- The binding is live, but `gscQueryScore` only appears on **new** page runs (existing rows aren't backfilled). Trigger a page run via `aivis_trigger_page_run` (per URL) to see scores quickly — or wait for the next scheduled cycle. There is no project-wide equivalent: prompt runs fire automatically on the project's schedule. Before triggering runs, call `lumar_get_account_credits` and surface the combined `aiVisibility` balance.
+- If the user wants to verify the scoring is working, point them at `aivis_get_page_scores` or `aivis_get_page_run` (with `sections: ["gsc"]` to see the `gscQueryEvaluations` array) once a fresh run completes.
 
 ## Output
 
