@@ -1,8 +1,10 @@
-# Lumar plugins for Claude Code, Cursor, and Codex (plus Perplexity)
+# Lumar plugins for AI agents
 
-Lumar analytics as a plugin for **Claude Code**, **Cursor**, and **OpenAI Codex**. Covers both **AI Visibility** (audit, competitor benchmark, topic bootstrap, prompt investigation, trend, page evaluation, GSC, provider management, brand curation) and **Lumar Analyze** (crawl health, report deep-dive, URL investigation, export, tasks, crawls, segments, single-page requests, custom metrics, Jira links, project admin). Backed by the unified Lumar MCP server at `https://mcp.lumar.io/mcp`.
+Lumar analytics for AI assistants and coding agents. The skills cover **AI Visibility** (audits, competitor benchmarks, share-of-voice and sentiment trends, prompt and page investigation, brand and provider management) and **Lumar Analyze** (crawl health, reports, URL investigation, exports, tasks, crawls, segments, project settings, custom metrics, integrations). They run on the Lumar MCP server at `https://mcp.lumar.io/mcp`, so any MCP-capable client can connect to it.
 
-The same `skills/` tree is shared across all three hosts — each host reads its own manifest (`.claude-plugin/`, `.cursor-plugin/`, or `.codex-plugin/`) and points at the same skill files.
+Plugin packaging is provided for Claude Code, Cursor, and OpenAI Codex. Clients without a plugin format, such as Perplexity, connect to the MCP server directly and get the same skills from the server.
+
+The same `skills/` tree is shared across all plugin hosts — each host reads its own manifest (`.claude-plugin/`, `.cursor-plugin/`, or `.codex-plugin/`) and points at the same skill files.
 
 ## Plugins
 
