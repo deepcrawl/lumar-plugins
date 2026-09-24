@@ -1,6 +1,6 @@
 ---
 name: analyze-export
-description: Export a Lumar Analyze report (or a filtered subset of its rows) as a CSV/XML download. Use this skill whenever someone asks to export, download, or share a report, "give me a CSV of `<report>`", "export the filtered rows", "download the broken links as CSV", or wants a file they can hand off. Also trigger when a user is about to leave a deep-dive conversation and needs the data offline.
+description: Export built-in or custom Lumar Analyze report rows as CSV/XML, or list, download, and delete existing report exports. Use when someone needs report data offline or wants to manage exported files.
 ---
 
 # Analyze Export
@@ -10,35 +10,42 @@ Kick off an async report export with the same filter logic the Lumar UI uses, re
 ## Parameters
 
 - **project_or_crawl**: Project name, domain, or specific crawl reference.
-- **report**: Report template code or human name.
+- **report**: Built-in report template code, custom report template ID, or human name.
 - **filters**: Optional structured filter — same shape as `analyze-report-deep-dive`.
 - **selected_metrics**: Optional list of metric codes (columns) to include. Default = all columns.
-- **format**: Optional output type: `CsvZip` (default), `CompactCsvZip`, `CsvGzip`, `CsvTarGz`, `XmlZip`.
+- **format**: Optional output type: `CsvZip` (default), `CsvGzip`, `CsvTarGz`, or `XmlZip` (Crawl URLs datasource only).
 - **segment**: Optional segment scope.
 - **filename**: Optional filename (3–218 chars, `[0-9a-zA-Z_-]`, no extension).
-- **limit**: Optional max rows.
+- **limit**: Optional max rows for built-in exports only; custom exports have no row-limit option.
 
 ## Step 0: Resolve account, project, crawl, and report
 
 Same as `analyze-report-deep-dive`. If the user is continuing from a prior deep-dive in this conversation, reuse the resolved IDs + filters without re-asking.
 
+For custom reports, resolve the numeric `customReportTemplateId` with `analyze_list_custom_report_templates`. Inspect its columns using `analyze_get_custom_report_template` with the project ID and template code. Use the custom export tool with the numeric ID; the built-in export tool accepts only built-in template codes.
+
+If the user wants an existing file, go straight to **Manage existing exports** below.
+
 ## Step 1: Validate filters and columns (if applicable)
 
-If `filters` or `selected_metrics` are present and not already validated, call `analyze_get_report_metadata` (`crawlId`, `reportTemplateCode`, optional `segmentId`) and check:
+For built-in reports, validate filters and columns with `analyze_get_report_metadata` (`crawlId`, `reportTemplateCode`, optional `segmentId`). For custom reports, use the resolved columns and predicates from `analyze_get_custom_report_template`; use its `basedOnReportTemplateCode` with `analyze_get_report_metadata` for the base catalog. Check:
 
 - Every `filterRules[i].metricCode` exists; its `predicate` is in `allowedPredicates`.
 - Every `selected_metrics` value is a valid metric code on the report.
+- Custom metrics are **not** in that catalog: validate any `customMetrics.<code>` filter or column against `analyze_list_project_custom_metrics` instead — use its `filterMetricCode` verbatim when constructing the filter, require the requested predicate to appear in that metric's `connectionPredicates`, and require the metric's `datasourceCode` to match the report's datasource.
 
-Echo the resolved column list back so the user can correct it before kicking off the job.
+For a custom report's displayed columns, pass its resolved saved column codes as `selectedMetrics`; omitting this argument uses the backend's export columns, which may differ from the custom report's display.
 
 ## Step 2: Kick off the export
 
-`analyze_export_report` with:
+For built-in reports, call `analyze_export_report` with:
 
 - `crawlId`, `reportTemplateCode` (required)
 - `reportType` (default `Basic`)
 - `segmentId`, `filterRules`, `filterOperator` (or a raw nested `filter` for mixed AND/OR/NOT trees — supply one or the other), `selectedMetrics`, `outputType`, `fileName`, `limit` as supplied
 - `unwindMetrics`: only when the user explicitly needs an array/object metric flattened into rows (max 1 per export).
+
+For custom reports, call `analyze_export_custom_report` with `crawlId` and `customReportTemplateId`. It accepts `reportType`, `segmentId`, filters, `selectedMetrics`, `outputType`, `fileName`, and `unwindMetrics` as above. The API has no custom-export `limit`, `taskId`, or `aggregateCode`. Export generation combines the crawl's saved custom template filter with the supplied filters and segment scope, including on diff slices; custom row previews on diff slices can therefore differ from exported rows.
 
 Capture the returned `reportDownload.id` (opaque), `status` (will be `Generating`), and `createdAt`.
 
@@ -57,7 +64,15 @@ Report back to the user:
 
 - `Generated` — return `fileURL`. It's a short-lived presigned link — remind the user it expires. An optional `fileName` override (same 3–218 char charset) can be passed here to rename the download.
 - `Generating` (or `Draft`) — tell them it's still in progress; suggest trying again in 30 s.
-- There is **no `Failed` status** — if an export sits in `Generating` unusually long, offer to kick off a fresh export with a smaller `limit` or narrower filter.
+- There is **no `Failed` status** — if an export sits in `Generating` unusually long, offer a narrower filter (or a smaller `limit` for built-in exports).
+
+## Manage existing exports
+
+1. Call `analyze_list_report_exports` with `crawlId`, optional `segmentId`, `limit` (default 20, max 100), and `cursor`. Follow `pagination.next_cursor` while looking for a matching file. Results include both built-in and custom exports, identified by `reportTemplate` or `customReportTemplate`, plus status, columns, and filters. Task-linked files are excluded by the API.
+2. For downloads, pass the chosen opaque `id` unchanged as `reportDownloadId` to `analyze_get_report_export`, then follow Step 4. This also refreshes expired links.
+3. For user-requested deletion, resolve the exact export from this list or a previously returned token and call `analyze_delete_report_export`. It removes the export record and requests file removal; the report and crawl remain available. The API rejects deleting task-linked exports.
+
+If creation reports that an export already exists, find it in the list and fetch its link. Delete an existing export only when the user has requested deletion or replacement.
 
 ## Common pitfalls
 

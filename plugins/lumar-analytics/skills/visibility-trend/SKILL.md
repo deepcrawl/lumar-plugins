@@ -36,12 +36,7 @@ Render a compact text-mode chart (sparkline characters or a simple table — mar
 
 ## Step 2: Decompose the score
 
-The visibility index has two components:
-
-- `avgCitationQualityScore` × √(citation appearance rate) × 0.25
-- `avgBrandMentionQualityScore` × √(mention appearance rate) × 0.75
-
-Plot both components alongside the headline index, and check `avgPresenceRate` separately — a presence-rate drop with stable quality means the brand appears less often; stable presence with falling quality means the appearances got weaker. If both components move together, the change is broad-based. If only one moved, the diagnosis narrows:
+The visibility index blends two sides — citation quality (25%) and mention quality (75%), each scaled by how often the brand appears. The response doesn't expose the per-side appearance rates, so don't try to reconstruct the exact components; diagnose from what it does return: `avgCitationQualityScore` and `avgBrandMentionQualityScore` for the quality sides, `totalBrandCitations` and `totalBrandMentions` for the volume sides, and check `avgPresenceRate` separately — a presence-rate drop with stable quality means the brand appears less often; stable presence with falling quality means the appearances got weaker. If both components move together, the change is broad-based. If only one moved, the diagnosis narrows:
 
 - **Mentions component dropped, citations stable**: AI answers stopped talking about the brand by name. Often follows a category shift, a competitor PR moment, or a brand positioning change.
 - **Citations component dropped, mentions stable**: AI providers stopped citing the brand's pages as sources. Often follows a sitemap / robots / canonical change, a site migration, or content being deindexed.
@@ -58,7 +53,7 @@ For the period showing the biggest delta:
    - **Top 3 topics that lost score**.
    - Whether the overall change is concentrated in 1–2 topics or spread across many.
 
-If concentrated (one topic explains > 50 % of the move), recommend the user drill into that topic with `/lumar-analytics:prompt-investigation` on its worst-moving prompt.
+If concentrated (one topic explains > 50 % of the move), recommend the user drill into that topic with the `prompt-investigation` skill on its worst-moving prompt.
 
 ## Step 4: Step-change investigation
 
@@ -68,7 +63,7 @@ If Step 1 flagged a step change (≥ 5 point move in a single bucket):
 2. `aivis_list_prompt_provider_visibility` (`projectId` + primary `brandId`) twice — once with `timeframe` set to the step bucket, once to the equivalent prior window. Compare the provider mix and `totalRuns` per provider — did a provider start or stop? Did run volume jump? (`aivis_list_prompt_runs` can't do this at project scope — it requires a specific `promptId` + `brandId`.)
 3. Check whether the project added or removed topics/prompts around that date. (`aivis_list_topics` and `aivis_list_prompts` don't return creation dates directly, but the user usually knows.)
 4. For GEO-app projects, `aivis_list_discovered_pages` with `timeframe` = the step bucket and `comparisonTimeframe` = the prior window shows which pages entered or left AI answers (`previousPeriod` deltas per URL) — a competitor page suddenly ranking often explains a mention-side drop.
-5. If none of those explain it, the answer is in the prompt-run details — pick one prompt that scored very differently in the step bucket vs neighbouring buckets (drill in with `aivis_list_prompt_runs` on that `promptId` + `brandId`) and recommend `/lumar-analytics:prompt-investigation` on it.
+5. If none of those explain it, the answer is in the prompt-run details — pick one prompt that scored very differently in the step bucket vs neighbouring buckets (drill in with `aivis_list_prompt_runs` on that `promptId` + `brandId`) and recommend the `prompt-investigation` skill on it.
 
 ## Step 5: Deliverable
 

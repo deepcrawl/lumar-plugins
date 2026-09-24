@@ -1,6 +1,6 @@
 ---
 name: analyze-project-admin
-description: Create, update, or clone Lumar Analyze projects through MCP's project admin toolset. Use this skill whenever someone asks to "create an Analyze project", "set up a crawl project", "clone this project", "change crawl settings", "update the primary domain", "switch rendering on", or configure common project-wide crawl settings from chat.
+description: Create, update, or clone Lumar Analyze projects through MCP's project admin toolset. Use this skill whenever someone asks to "create an Analyze project", "set up a crawl project", "clone this project", "change crawl settings", "update the primary domain", "switch rendering on", manage uploaded URL lists, backlinks or log-summary files, or configure project-wide crawl settings from chat.
 ---
 
 # Analyze Project Admin
@@ -40,7 +40,7 @@ Call `analyze_create_project` with:
 - optional `moduleCode`
 - only the settings the user explicitly requested
 
-The tool intentionally exposes only common settings. Anything beyond that (URL rewrites, custom extractions, custom user-agent strings, authentication, advanced schedules, render-blocking rules) keeps server defaults and should be edited in the Lumar dashboard.
+For the full settings surface and safe read → patch → verify workflow, load `analyze-project-settings`.
 
 ## Step 2: Update
 
@@ -71,4 +71,22 @@ Include:
 - **Least change** — on update, omit fields the user did not ask to change.
 - **Crawl rate limits** — `maximumCrawlRate` accepts `0.33`, `0.5`, or integers >= 1 and is capped by the account.
 - **No module migration** — create a new project or clone if the module needs to change.
-- **`crawlTypes` is create-only** — `analyze_update_project` does not accept it; change data sources from the Lumar dashboard.
+- **Crawl sources replace wholesale** — read existing `crawlTypes` before changing them with `analyze_update_project`. For uploaded lists, backlinks or log-summary files, follow the manual file upload workflow in `analyze-project-settings`.
+
+## Member project visibility
+
+Read current members and assignments with `account_list_user_visibility_tags`, paging until
+`hasNextPage` is false. Use `account_set_user_visibility_tags` to replace an existing member's tags in one account. This
+requires the account Admin role. Tags apply across Analyze, Protect and AI Visibility. Non-admin
+members with tags see projects matching any tag; admins and members without tags see all projects.
+Before sending an empty tag list, explicitly confirm that the user intends to grant access to every
+project. Promoting a member to Admin clears their visibility tags. A tag cannot be deleted while
+projects or users still reference it; remove those assignments first.
+
+Untagged projects remain visible to everyone. Monitor dashboards are all-or-nothing across their
+views; a board remains visible when at least one dashboard is accessible. Before linking AI Visibility
+and crawl projects or editing tags on either linked project, call `project_preview_link_tag_warnings`
+with the candidate link or complete proposed tag set. Show the returned warnings and let the user
+continue. Linked datasource content remains readable across different tag sets: this is a known and
+accepted gap in the Tag boundary. `aivis_get_run_usage` preserves full account totals and combines
+hidden project demand into `Other projects` without naming those projects.

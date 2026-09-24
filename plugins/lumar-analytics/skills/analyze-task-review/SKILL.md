@@ -30,7 +30,7 @@ Surface Analyze remediation tasks (project- or account-scoped), prioritise them,
 - `activeOnly`, `status`, `priority`, `query` (substring on title), `segmentId` as supplied.
 - `limit: 100` to minimise pagination on review-style use.
 
-If `pageInfo.hasNextPage`, mention the cap and offer to page further only if the user asks.
+If `pagination.has_next_page`, mention the cap and offer to page further (passing `pagination.next_cursor` as `cursor`) only if the user asks.
 
 ## Step 2: Prioritise client-side
 

@@ -21,7 +21,8 @@ This skill uses **Lumar MCP tools** exclusively. All tool references below (`lum
 
 1. `lumar_get_me` → pick AI-Visibility-entitled account. (System admins get no account list — resolve by name with `lumar_search_accounts`.)
 2. `aivis_list_projects` → pick the project and note its primary brand. (`aivis_list_prompts` needs both `projectId` and `brandId`, so resolve these first.)
-3. If the user named a prompt by text, call `aivis_list_prompts` with `query` set to that text. If multiple prompts match, present a disambiguation list and ask. Never silently pick.
+3. If the user asked about branded vs unbranded performance, call `aivis_list_prompts` twice with `branded: true` and `branded: false` and compare: branded prompts name the brand, unbranded ones are category questions.
+4. If the user named a prompt by text, call `aivis_list_prompts` with `query` set to that text. If multiple prompts match, present a disambiguation list and ask. Never silently pick.
 
 ## Step 1: Pull the run set
 
@@ -68,7 +69,7 @@ Avoid generic advice ("write more content"). Tie every recommendation to a speci
 
 ## Step 5: Optional follow-ups
 
-If the investigation surfaces a topic-wide pattern (not just this one prompt), suggest the user run `/lumar-analytics:competitor-benchmark` next to confirm.
+If the investigation surfaces a topic-wide pattern (not just this one prompt), suggest the user run the `competitor-benchmark` skill next to confirm.
 
 If the prompt is fine and the user was investigating a hunch, say so explicitly — false alarms are useful signal.
 

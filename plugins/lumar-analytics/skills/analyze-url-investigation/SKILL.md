@@ -1,6 +1,6 @@
 ---
 name: analyze-url-investigation
-description: Investigate a single URL in a Lumar Analyze crawl — crawl metrics, stored HTML, search-query performance, site-speed audits, accessibility issues, and structured-data findings, like the Resource Detail screen in Core UI. Use this skill whenever someone asks "why is this URL flagged?", "what's wrong with `<url>`?", "show me the crawled HTML", names a specific URL and wants a full diagnostic, or asks for the accessibility/site-speed/schema breakdown of one page. Also trigger when users want to see the GSC search queries a URL ranks for.
+description: Investigate a single URL in a Lumar Analyze crawl — metrics, stored HTML and screenshots, accessibility fix suggestions, site-speed audits, search queries, AI title/description optimisation, and structured-data findings. Use when someone asks why a URL is flagged, wants captured page content, asks for a page's accessibility/site-speed/schema breakdown, or wants search-query-based content suggestions.
 ---
 
 # Analyze URL Investigation
@@ -38,13 +38,30 @@ Render a per-section summary. Skip a section entirely if it returned zero rows �
 
 - **Crawl metrics** — status code, canonical, title, content length, hreflang, indexability flags. Call out anything that would have flagged a report (e.g. `noindex: true`, `statusCode: 404`, missing canonical).
 - **Accessibility issues** — group by WCAG impact (Critical → Minor). Show the top 5 with rule + element selector.
-- **Site-speed audits** — show the worst-scoring audits (lowest `score`). Opportunities (`savingsMs`) live in `CrawlSiteSpeedAuditOpportunities`, which is **not** in the default datasource set — add it to `datasources` explicitly when the user cares about speed fixes.
+- **Site-speed audits** — show the worst-scoring audits (lowest `score`). For affected resources/elements, call `analyze_get_site_speed_audit` with `crawlId`, `urlId` and the row's `auditId`; page its items using `cursor: pagination.next_cursor`. Savings are returned in seconds (`savingsSecs` / `wastedSecs`) and KiB (`savingsKib` / `wastedKib`). Opportunities also live in `CrawlSiteSpeedAuditOpportunities`, which is **not** in the default datasource set — add it to `datasources` when needed.
 - **Search queries (GSC)** — top 5 queries by clicks; flag queries with high impressions but low CTR.
 - **Structured-data** — list block types and issues by severity.
 
 When the user asks for the crawled source, call `analyze_get_crawl_url_html` with `crawlId` and exactly one of `url` or `urlId`. It returns the body inline and auto-picks stored HTML, preferring `HtmlStoring/rendered-body.html` over the static body. Pass `attachmentName: "HtmlStoring/static-body.html"` when the user specifically needs pre-JavaScript source. Page through a truncated response with `offset: nextOffset`.
 
 Stored HTML only exists when the HTML custom metric container was enabled for that crawl. On `not_found/stored_html`, do not say the page is unreachable: offer a fresh capture with `analyze_create_single_page_request` followed by `analyze_get_single_page_request_html`. Other attachments are listed in `otherAttachments` and can be selected with `attachmentName`.
+
+### Screenshots
+
+Call `analyze_get_crawl_url_screenshots` with `crawlId` and `urlId` (the page's `urlDigest`). It returns signed download links for historical captures from ScreenshotStoring, plus retention expiry. Share the returned links; image bytes are not embedded. `expiredScreenshots` lists captures whose retained files have expired and cannot be downloaded.
+
+On missing screenshots, check `analyze_get_crawl_summary` for `ScreenshotStoring` in `containers` and the crawl's archive status. Restore an archived crawl before reading its captures. A new crawl captures today's page; it cannot recover an expired historical screenshot.
+
+### AI fix and content suggestions
+
+Read existing accessibility fixes with `analyze_get_accessibility_issue_solution_suggestion` (`crawlId`, `issueDigest` from the accessibility row). Use the issue digest, not its WCAG rule ID or the page's URL digest.
+
+When the user requests generation, check `tools/list`: both generation tools below require `analyze:write`, a user session, and account AI features. If absent, direct the user to a user-authenticated session or the Lumar dashboard. Existing suggestions and optimisation results remain readable from service-account sessions.
+
+- **Accessibility**: when the read returned null, call `analyze_create_accessibility_issue_solution_suggestion` with the same inputs. It returns the generated suggestion directly, or null if none was produced. If creation reports a conflict, read the existing suggestion again.
+- **Title, description and H1**: call `analyze_create_element_optimisation_request` with `crawlId` and `urlId`; optionally provide one to five unique `searchQueryDigests` from this page's `CrawlSearchQueriesWithLandingPages` rows. Omit them to use the top five by clicks. At least one search query with this landing page must exist, and Editor access is required. Poll `analyze_get_element_optimisation_request` with `requestId` from creation while status is `Created` or `Generating`. Stop at `Generated` and present the result, or at `Failed` and explain `failureReason`. Each create call starts a new request, so reuse the returned ID for polling.
+
+These tools store suggestions in Lumar; applying them to the website is a separate action.
 
 ## Step 4: Diagnose
 

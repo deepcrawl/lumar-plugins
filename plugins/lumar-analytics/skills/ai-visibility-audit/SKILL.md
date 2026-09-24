@@ -75,7 +75,7 @@ Write the audit as a markdown report with these sections:
 2. **Headline metrics** — score table with primary brand, top 3 competitors, deltas.
 3. **What's working** — strong topics, citation wins.
 4. **What's not** — weak topics, mention gaps, provider-specific weaknesses.
-5. **Recommended next steps** — 3–5 specific actions (add prompts to topic X, investigate why provider Y scores low, etc.). Where useful, point the user at a sibling skill by name (e.g. *"run the `prompt-investigation` skill next"*); skills are matched on intent, not invoked as slash commands.
+5. **Recommended next steps** — 3–5 specific actions (add prompts to topic X, investigate why provider Y scores low, etc.). Where useful, point the user at a sibling skill by name (e.g. _"run the `prompt-investigation` skill next"_); skills are matched on intent, not invoked as slash commands.
 
 Always include the project ID and the timeframe at the top of the report so the user can re-run the same analysis later.
 
